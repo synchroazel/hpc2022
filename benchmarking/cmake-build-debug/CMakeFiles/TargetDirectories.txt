@@ -1,0 +1,3 @@
+/Users/azel/Developer/hpc2022/benchmarking/cmake-build-debug/CMakeFiles/benchmarking.dir
+/Users/azel/Developer/hpc2022/benchmarking/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/azel/Developer/hpc2022/benchmarking/cmake-build-debug/CMakeFiles/rebuild_cache.dir
