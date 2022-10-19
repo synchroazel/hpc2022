@@ -6,6 +6,9 @@
 #define SEC_CONVERSION 1000
 #define MB_CONVERSION 1048576
 
+// compile: mpicc -g -Wall -o ./executables/mpi_benchmarking main.c -lm
+// execute: mpiexec -n 2 ./executables/mpi_benchmarking
+
 int main() {
 
     // Initialize the MPI environment
