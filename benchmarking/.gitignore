@@ -1,5 +1,6 @@
 # our files
 mpi_*
+cmake*/
 
 ### CVS template
 /CVS/*
