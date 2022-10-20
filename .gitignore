@@ -2,6 +2,7 @@
 mpi_*
 cmake-build-default/
 cmake-build-debug/
+CMakeLists.txt
 
 ### CVS template
 /CVS/*
