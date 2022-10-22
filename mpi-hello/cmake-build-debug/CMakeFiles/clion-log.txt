@@ -1,1 +1,0 @@
-CMakeLists.txt not found in /Users/azel/Developer/hpc2022/mpi-hello Select CMakeLists.txt
