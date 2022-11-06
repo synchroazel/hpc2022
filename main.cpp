@@ -3,7 +3,7 @@
 #include "mpi.h"
 
 #define PERFORMANCE_CHECK true
-#define DEBUG true
+#define DEBUG false
 
 // TODO: everything concerning MPI
 
@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
     //Dataset df = read_data_file(filepath, 5, 4, 4, file_separator,".");
 
     // Initialize the MPI environment
-    MPI_Init(NULL, NULL);
+    MPI_Init(nullptr, nullptr);
     // Get the number of processes
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);

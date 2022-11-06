@@ -12,8 +12,6 @@
 #include <boost/tokenizer.hpp> // for tokenization
 #include <regex>
 
-#define DEBUG true
-
 //  TODO: parallelize with MPI?
 Dataset read_data_file(const std::string& file_path, int rows, int columns, int target_column, char* separator,const std::string& comma_separator, bool skip_first_row=true, bool skip_first_column=true){
 /*expects a scv of double*/
@@ -63,7 +61,7 @@ Dataset read_data_file(const std::string& file_path, int rows, int columns, int 
                 j++;
             }
             i++;
-            if(i >= rows){ break;}
+            if(i >= r){ break;}
         }
         file.close();
 
@@ -79,8 +77,8 @@ Dataset read_data_file(const std::string& file_path, int rows, int columns, int 
 // output feedback
 #if DEBUG
     ris.print(true);
-#else
-    ris.print(false);
+// #else
+//     ris.print(false);
 #endif
 
     return ris;
