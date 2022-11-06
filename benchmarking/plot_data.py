@@ -22,7 +22,7 @@ if __name__ == "__main__":
     time = df["time (sec)"].astype(float)
     rate = df["rate (MB/sec)"].astype(float)
 
-    if args.log_scale == True:
+    if args.log_scale:
         axs[0].plot(df["n"], [math.log(t) for t in time])
         axs[1].plot(df["n"], [math.log(r) for r in rate])
 
