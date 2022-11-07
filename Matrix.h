@@ -12,19 +12,20 @@ the ith element in a Row (which is a T&)
 #include "iostream"
 
 class Matrix{
-    double* array{};
+    std::vector<double> array{};
     int m_width=0;
     int r=0;
 public:
     Matrix()= default;
-    Matrix( int columns, int rows ) : r(rows), m_width( columns ), array( new double [ columns * rows ] ) {}
-    ~Matrix() { delete[] array; }
+    Matrix( int columns, int rows ) : r(rows), m_width( columns ), array(std::vector<double>( columns * rows)) {}
     double at( int x, int y ) const { return array[ index( x, y ) ]; }
     void modify_value(int x, int y, double new_value) {array[index( x, y )] = new_value;}
     int get_rows_number() const{return  this->r;}
     int get_columns_number() const{return this->m_width;}
 protected:
-    int index( int x, int y ) const { return x + m_width * y; }
+    int index( int x, int y ) const {
+        return y + m_width * x;
+    }
 public: // presentation
     void print(bool full) const{
         std::cout << "The matrix has " << r << " rows and " << m_width << " columns" << std::endl;

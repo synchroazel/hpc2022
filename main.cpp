@@ -8,14 +8,14 @@
 // TODO: everything concerning MPI
 
 int main(int argc, char *argv[]) {
-     //std::string  filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/gene_expr.tsv"; // TODO: change to CLI args
-    std::string  filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/dummy.csv"; // TODO: change to CLI args
-    //char* file_separator = (char*)("\t");
-    char* file_separator = (char*)(",");
+    std::string  filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/gene_expr.tsv"; // TODO: change to CLI args
+    //std::string  filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/dummy.csv"; // TODO: change to CLI args
+    char* file_separator = (char*)("\t");
+    //char* file_separator = (char*)(",");
 
     // read mpi?
-    // Dataset df = read_data_file(filepath, 79, 2002, 2002, file_separator,".");
-    Dataset df = read_data_file(filepath, 5, 4, 4, file_separator,".");
+     Dataset df = read_data_file(filepath, 79, 2002, 2002, file_separator,".");
+    //Dataset df = read_data_file(filepath, 5, 4, 4, file_separator,".");
 
     // Initialize the MPI environment
     MPI_Init(nullptr, nullptr);
