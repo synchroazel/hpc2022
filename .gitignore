@@ -2,8 +2,8 @@
 mpi_*
 **/cmake-build-default/
 **/cmake-build-debug/
-**/*.tsv
-
+**/gene_expr.tsv
+**/iris.csv
 
 ### CVS template
 /CVS/*
@@ -77,9 +77,6 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
-
-### Example user template template
-### Example user template
 
 # IntelliJ project files
 .idea
