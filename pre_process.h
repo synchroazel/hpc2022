@@ -12,7 +12,7 @@
 #include <boost/tokenizer.hpp> // for tokenization
 #include <regex>
 
-#define DEBUG false
+#define DEBUG true
 //  TODO: parallelize with MPI?
 Dataset read_data_file(const std::string& file_path, int rows, int columns, int target_column, char* separator,const std::string& comma_separator, bool skip_first_row=true, bool skip_first_column=true){
 /*expects a scv of double*/
@@ -48,6 +48,8 @@ Dataset read_data_file(const std::string& file_path, int rows, int columns, int 
                 if(skip_first_column && j == -1){
                     j++;
                     continue;
+                } else if(!skip_first_column && j == -1){
+                    j++;
                 }
 
                 const std::string& value = *beg;
@@ -57,8 +59,8 @@ Dataset read_data_file(const std::string& file_path, int rows, int columns, int 
                 if(j+1 != target_column){
                     x.modify_value(i,j, std::stod(value)); // to double NB: should fix
 #if DEBUG
-                    std::cout << "New value: " << value << " at " << i << ", " << j << std::endl;
-                    x.print(true);
+                    // std::cout << "New value: " << value << " at " << i << ", " << j << std::endl;
+                    // x.print(true);
 #endif
                 } else {
                     y[i] = std::stoi(value); // to int (will be a class)
