@@ -8,3 +8,6 @@ find_package(MPI REQUIRED)
 add_executable(hpc2022 main.cpp pre_process.h Matrix.h)
 # Add libraries for code completion and compiling
 target_link_libraries(hpc2022 PUBLIC MPI::MPI_CXX)
+
+# for M1 Macs
+include_directories("/opt/homebrew/include")
