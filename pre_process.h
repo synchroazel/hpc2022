@@ -12,6 +12,7 @@
 #include <boost/tokenizer.hpp> // for tokenization
 #include <regex>
 
+#define DEBUG false
 //  TODO: parallelize with MPI?
 Dataset read_data_file(const std::string& file_path, int rows, int columns, int target_column, char* separator,const std::string& comma_separator, bool skip_first_row=true, bool skip_first_column=true){
 /*expects a scv of double*/
@@ -20,7 +21,7 @@ Dataset read_data_file(const std::string& file_path, int rows, int columns, int 
     int r = rows;
     if(skip_first_column)cols--;
     if(skip_first_row)r--;
-    Matrix<double> x = Matrix<double>(cols, r);
+    Matrix x = Matrix(cols, r);
 #if DEBUG
     x.print(false);
 #endif
@@ -54,7 +55,11 @@ Dataset read_data_file(const std::string& file_path, int rows, int columns, int 
                 std::regex_replace(value, pattern,comma_separator); // will be converted into the separator
 
                 if(j+1 != target_column){
-                    x[j][i] = std::stod(value); // to double NB: should fix
+                    x.modify_value(i,j, std::stod(value)); // to double NB: should fix
+#if DEBUG
+                    std::cout << "New value: " << value << " at " << i << ", " << j << std::endl;
+                    x.print(true);
+#endif
                 } else {
                     y[i] = std::stoi(value); // to int (will be a class)
                 }
@@ -76,7 +81,7 @@ Dataset read_data_file(const std::string& file_path, int rows, int columns, int 
 
 // output feedback
 #if DEBUG
-    ris.print(true);
+    ris.print_dataset(true);
 // #else
 //     ris.print(false);
 #endif

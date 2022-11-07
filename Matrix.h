@@ -10,65 +10,72 @@ the ith element in a Row (which is a T&)
 #include <utility>
 #include <vector>
 #include "iostream"
-// reference: https://stackoverflow.com/a/41395564
-template <typename T>
-class Matrix {
-    // implementation
-    protected:
-    int col, row;
 
+class Matrix{
+    double* array{};
+    int m_width=0;
+    int r=0;
 public:
-    int get_columns_number(){return col;}
-    int get_rows_number(){return row;}
-    typedef std::vector<T> Row;
-
-    std::vector<Row> data;
-
-public: // interface
-    Matrix(): row(0), col(0), data(0){}
-    Matrix(int c, int r): row(r), col(c), data(c, std::vector<T>(r)) {}
-
-    // allow to use matrix[i][j]
-    Row & operator[](int i) {
-        return data[i];
-    }
-
+    Matrix()= default;
+    Matrix( int columns, int rows ) : r(rows), m_width( columns ), array( new double [ columns * rows ] ) {}
+    ~Matrix() { delete[] array; }
+    double at( int x, int y ) const { return array[ index( x, y ) ]; }
+    void modify_value(int x, int y, double new_value) {array[index( x, y )] = new_value;}
+    int get_rows_number() const{return  this->r;}
+    int get_columns_number() const{return this->m_width;}
+protected:
+    int index( int x, int y ) const { return x + m_width * y; }
 public: // presentation
-    void print(bool verbose=true){
-        if(verbose) {
-            for (int i = 0; i < col; i++) {
-                for (int j = 0; j < row; j++) {
-                    std::cout << data[i][j] << ", ";
+    void print(bool full) const{
+        std::cout << "The matrix has " << r << " rows and " << m_width << " columns" << std::endl;
+        if(full){
+            for(int i=0; i < r; i++){
+                for(int j=0; j<m_width;j++){
+                    std::cout << at(i, j) << ", ";
                 }
                 std::cout << std::endl;
             }
-        } else {
-            std::cout << "The matrix has " << row << " rows and " << col << " columns" << std::endl;
         }
     }
 };
 
+
+
 class Dataset{
+private:
+    int c=0, r=0;
 public:
-    Matrix<double> predictor_matrix; // predictors matrix
+
+    Matrix predictor_matrix; // predictors matrix
     std::vector<int> class_vector; // class output matrix
+    int get_predictors_number() const{return c + 1;}
+    int get_rows_number() const{return r;}
 
-    int get_predictors_number(){ return predictor_matrix.get_columns_number() + 1;}
-    int get_rows_number(){ return predictor_matrix.get_rows_number();}
+public: // constructors
+    Dataset()=default;
 
-public: // constructor
-    Dataset()= default;
-    Dataset(Matrix<double> x, std::vector<int> y) {
-        predictor_matrix = std::move(x);
-        class_vector = std::move(y);
+    Dataset(int x_rows, int x_cols){
+        this->predictor_matrix = Matrix(x_cols,x_rows);
+        this->class_vector = std::vector<int>(x_rows);
+        this->c=x_cols+1;
+        this->r=x_rows;
+    }
+    Dataset(const Matrix& x, std::vector<int> y) {
+        this->predictor_matrix = x;
+        this->class_vector = std::move(y);
+        this->c=x.get_columns_number();
+        this->r=x.get_rows_number();
     }
 
+
 public: // presentation
-    void print(bool verbose=true){
-        std::cout << "The dataset has a total of " << get_predictors_number() << "predictors and " << get_rows_number() << "rows." << std::endl;
-        if(verbose){
+
+
+    void print_dataset(bool all=true){
+        std::cout << "The dataset has a total of " << get_predictors_number() << " predictors and " << get_rows_number() << " rows." << std::endl;
+        if(all){
             std::cout << "Predictor matrix:" << std::endl;
-            predictor_matrix.print();
+            predictor_matrix.print(all);
 
             std::cout << "class vector:" << std::endl;
             for (auto i: class_vector)
@@ -77,6 +84,7 @@ public: // presentation
     }
 
 };
+
 
 
 #endif //HPC2022_MATRIX_H
