@@ -12,20 +12,16 @@
 #include "boost/tokenizer.hpp" // for tokenization
 #include "regex"
 
-#define DEBUG true
+#define DEBUG_READ_DATA false
 //  TODO: parallelize with MPI?
-Dataset read_data_file(const std::string& file_path, int rows, int columns, int target_column, char* separator,const std::string& comma_separator, bool skip_first_row=true, bool skip_first_column=true){
+Dataset read_data_file_serial(const std::string& file_path, int rows, int columns, int target_column, char* separator,const std::string& comma_separator, bool skip_first_row=true, bool skip_first_column=true){
 /*expects a scv of double*/
     // initialize
-    int cols = columns-1;
-    int r = rows;
-    if(skip_first_column)cols--;
-    if(skip_first_row)r--;
-    Matrix x = Matrix(cols, r);
-#if DEBUG
+    Matrix x = Matrix(columns, rows);
+#if DEBUG_READ_DATA
     x.print(false);
 #endif
-    std::vector<int> y = std::vector<int>(r);
+    std::vector<int> y = std::vector<int>(rows);
     int i=0, j; // column and row iterator
     if(skip_first_column){target_column--;}
 
@@ -58,7 +54,7 @@ Dataset read_data_file(const std::string& file_path, int rows, int columns, int 
 
                 if(j+1 != target_column){
                     x.modify_value(i,j, std::stod(value)); // to double NB: should fix
-#if DEBUG
+#if DEBUG_PRE_PROCESS
                     // std::cout << "New value: " << value << " at " << i << ", " << j << std::endl;
                     // x.print(true);
 #endif
@@ -68,7 +64,7 @@ Dataset read_data_file(const std::string& file_path, int rows, int columns, int 
                 j++;
             }
             i++;
-            if(i >= r){ break;}
+            if(i >= rows){ break;}
         }
         file.close();
 
@@ -82,7 +78,7 @@ Dataset read_data_file(const std::string& file_path, int rows, int columns, int 
     Dataset ris = Dataset(x,y);
 
 // output feedback
-#if DEBUG
+#if DEBUG_PRE_PROCESS
     ris.print_dataset(true);
 // #else
 //     ris.print(false);

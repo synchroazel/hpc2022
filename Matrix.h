@@ -12,10 +12,13 @@ the ith element in a Row (which is a T&)
 #include "iostream"
 
 class Matrix {
+
+public:
+    // must be public, otherwise we cannot create mpi structs
     std::vector<double> array{};
     int m_width = 0;
     int r = 0;
-public:
+
     Matrix() = default;
 
     Matrix(int columns, int rows) : r(rows), m_width(columns), array(std::vector<double>(columns * rows)) {}
