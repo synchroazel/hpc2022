@@ -139,7 +139,7 @@ void read_dataset_parallel(
                 if(j+1 != target_column){
 #if DEBUG_READ_DATA
                     std::cout << "New value: " << value << " at " << i << ", " << j << std::endl;
-                    //x.print(true);
+                    Matrix::print(x, x_rows, x_columns);
 #endif
                     Matrix::modify_value(x,i,j, x_columns, std::stod(value));
 

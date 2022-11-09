@@ -74,8 +74,8 @@ int main(int argc, char *argv[]) {
     // int target_column = 2002;// TODO: change to CLI args
 
     int rows = 4;// TODO: change to CLI args
-    int columns = 3;// TODO: change to CLI args
-    int target_column = 3;// TODO: change to CLI args
+    int columns = 4;// TODO: change to CLI args
+    int target_column = 4;// TODO: change to CLI args
 #endif
 
     // Get the number of processes
@@ -130,8 +130,8 @@ int main(int argc, char *argv[]) {
     } else if (world_size <= rows * columns){
         // squares of rows and columns
         // TODO: fix
-        rows_per_process = (int) ceil(rows/world_size);
-        cols_per_process = (int) ceil(rows/world_size);
+        rows_per_process = (int) ceil(sqrt(rows*cols/world_size));
+        cols_per_process = (int) ceil(sqrt(rows*cols/world_size));
 
     } else {
         rows_per_process=1;

@@ -10,6 +10,7 @@ the ith element in a Row (which is a T&)
 #include "utility"
 #include "vector"
 #include "iostream"
+#include "set"
 
 class Matrix {
 
@@ -68,6 +69,18 @@ public: // presentation
             }
         }
     }
+
+    static void print(std::vector<double> x, int rows, int columns) {
+        std::cout << "The matrix has " << rows << " rows and " << columns << " columns" << std::endl;
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < columns; j++) {
+                    std::cout << x[j + columns * i] << ", ";
+            }
+                std::cout << std::endl;
+        }
+
+    }
 };
 
 
@@ -78,41 +91,21 @@ public:
 
     Matrix predictor_matrix; // predictors matrix
     std::vector<int> class_vector; // class output matrix
+    std::vector<int> unique_classes;
     int get_predictors_number() const { return c + 1; }
-
     int get_rows_number() const { return r; }
 
-    std::vector<int> get_classes() const {
-        std::vector<int> unique_classes;
+
+    int class_len(int class_value) const {
+        int class_size = 0;
         for (int i = 0; i < r; i++) {
-            if (std::find(unique_classes.begin(), unique_classes.end(), class_vector[i]) == unique_classes.end()) {
-                unique_classes.push_back(class_vector[i]);
+            if (class_vector[i] == class_value) {
+                ++class_size;
             }
         }
-        return unique_classes;
+        return class_size;
     }
 
-    int class1_len() const {
-        std::vector<int> unique_classes = get_classes();
-        int class1_size = 0;
-        for (int i = 0; i < r; i++) {
-            if (class_vector[i] == unique_classes[0]) {
-                class1_size++;
-            }
-        }
-        return class1_size;
-    }
-
-    int class2_len() const {
-        std::vector<int> unique_classes = get_classes();
-        int class2_size = 0;
-        for (int i = 0; i < r; i++) {
-            if (class_vector[i] == unique_classes[1]) {
-                class2_size++;
-            }
-        }
-        return class2_size;
-    }
 
 public: // constructors
     Dataset() = default;
@@ -122,6 +115,7 @@ public: // constructors
         this->class_vector = std::vector<int>(x_rows);
         this->c = x_cols + 1;
         this->r = x_rows;
+        this->class_vector = {-1,1};
     }
 
     Dataset(const Matrix &x, std::vector<int> y) {
@@ -129,11 +123,17 @@ public: // constructors
         this->class_vector = std::move(y);
         this->c = x.get_columns_number();
         this->r = x.get_rows_number();
+
+        // get unique elements
+        std::set<int> s;
+        unsigned size = y.size();
+        for( unsigned i = 0; i < size; ++i ) s.insert( y[i] );
+        unique_classes.assign( s.begin(), s.end() );
+
     }
 
 
 public: // presentation
-
 
     void print_dataset(bool all = true) {
         std::cout << "The dataset has a total of " << get_predictors_number() << " predictors and " << get_rows_number()
