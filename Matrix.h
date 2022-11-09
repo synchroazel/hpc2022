@@ -82,6 +82,38 @@ public:
 
     int get_rows_number() const { return r; }
 
+    std::vector<int> get_classes() const {
+        std::vector<int> unique_classes;
+        for (int i = 0; i < r; i++) {
+            if (std::find(unique_classes.begin(), unique_classes.end(), class_vector[i]) == unique_classes.end()) {
+                unique_classes.push_back(class_vector[i]);
+            }
+        }
+        return unique_classes;
+    }
+
+    int class1_len() const {
+        std::vector<int> unique_classes = get_classes();
+        int class1_size = 0;
+        for (int i = 0; i < r; i++) {
+            if (class_vector[i] == unique_classes[0]) {
+                class1_size++;
+            }
+        }
+        return class1_size;
+    }
+
+    int class2_len() const {
+        std::vector<int> unique_classes = get_classes();
+        int class2_size = 0;
+        for (int i = 0; i < r; i++) {
+            if (class_vector[i] == unique_classes[1]) {
+                class2_size++;
+            }
+        }
+        return class2_size;
+    }
+
 public: // constructors
     Dataset() = default;
 
