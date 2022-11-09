@@ -110,10 +110,10 @@ void Kernel_SVM::log(const std::string str) {
 // --------------------------------------
 // class{Kernel_SVM} -> function{train}
 // --------------------------------------
+
 // void Kernel_SVM::train(const std::vector<std::vector<double>> class1_data, const std::vector<std::vector<double>> class2_data, const size_t D, const double C, const double lr, const double limit){
 
-void Kernel_SVM::train(Matrix training_data,
-                       const std::vector<int> classes,
+void Kernel_SVM::train(Dataset training_data,
                        const size_t D,
                        const double C,
                        const double lr,
@@ -126,10 +126,10 @@ void Kernel_SVM::train(Matrix training_data,
     std::vector<std::vector<double>> class2_data;
 
     for (size_t i = 0; i < training_data.get_rows_number(); i++) {
-        if (classes[i] == 0) {
-            class1_data.push_back(training_data.get_row(i));
-        } else if (classes[i] == 1) {
-            class2_data.push_back(training_data.get_row(i));
+        if (training_data.class_vector[i] == 0) {
+            class1_data.push_back(training_data.predictor_matrix.get_row(i));
+        } else if (training_data.class_vector[i] == 1) {
+            class2_data.push_back(training_data.predictor_matrix.get_row(i));
         }
     }
 
@@ -264,22 +264,21 @@ void Kernel_SVM::train(Matrix training_data,
 // -------------------------------------
 // class{Kernel_SVM} -> function{test}
 // -------------------------------------
-void Kernel_SVM::test(Matrix test_data, const std::vector<int> classes) {
+void Kernel_SVM::test(Dataset test_data) {
 
 
-    // split all test data into class1 and class2 data
+    // split all training data into class1 and class2 data
 
     std::vector<std::vector<double>> class1_data;
     std::vector<std::vector<double>> class2_data;
 
     for (size_t i = 0; i < test_data.get_rows_number(); i++) {
-        if (classes[i] == 0) {
-            class1_data.push_back(test_data.get_row(i));
-        } else if (classes[i] == 1) {
-            class2_data.push_back(test_data.get_row(i));
+        if (test_data.class_vector[i] == 0) {
+            class1_data.push_back(test_data.predictor_matrix.get_row(i));
+        } else if (test_data.class_vector[i] == 1) {
+            class2_data.push_back(test_data.predictor_matrix.get_row(i));
         }
     }
-
 
     size_t i;
 

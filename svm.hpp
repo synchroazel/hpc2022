@@ -55,15 +55,13 @@ public:
 
     // function
     // void train(const std::vector<std::vector<double>> class1_data, const std::vector<std::vector<double>> class2_data, const size_t D, const double C, const double lr, const double limit=0.0001);
-    void train(Matrix training_data,
-               const std::vector<int> classes,
+    void train(Dataset training_data,
                const size_t D,
                const double C,
                const double lr,
                const double limit);
 
-    void test(Matrix test_data,
-              const std::vector<int> classes);
+    void test(Dataset test_data);
 
     double f(const std::vector<double> x);
 
