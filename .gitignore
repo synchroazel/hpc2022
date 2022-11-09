@@ -2,8 +2,8 @@
 mpi_*
 **/cmake-build-default/
 **/cmake-build-debug/
-**/gene_expr.tsv
-**/iris.csv
+**/*.tsv
+**/*.csv
 
 ### CVS template
 /CVS/*
