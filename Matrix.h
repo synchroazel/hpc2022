@@ -24,8 +24,14 @@ public:
     Matrix(int columns, int rows) : r(rows), m_width(columns), array(std::vector<double>(columns * rows)) {}
 
     double at(int x, int y) const { return array[index(x, y)]; }
+    static double at(const std::vector<double>& matrix, int x, int y, int matrix_width){
+        return matrix[y + matrix_width * x];
+    }
 
     void modify_value(int x, int y, double new_value) { array[index(x, y)] = new_value; }
+    static void modify_value(std::vector<double>& matrix, int x, int y, int matrix_width, double new_value){
+        matrix[y + matrix_width * x] = new_value;
+    }
 
     int get_rows_number() const { return this->r; }
 
