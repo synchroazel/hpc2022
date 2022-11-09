@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     // int columns = 2002;// TODO: change to CLI args
     // int target_column = 2002;// TODO: change to CLI args
 
-    int rows = 4;// TODO: change to CLI args
+    int rows = 5;// TODO: change to CLI args
     int columns = 4;// TODO: change to CLI args
     int target_column = 4;// TODO: change to CLI args
 #endif
@@ -122,53 +122,102 @@ int main(int argc, char *argv[]) {
     if(world_size <= rows){
         // just separate the rows
         rows_per_process = (int) ceil(rows/world_size); // es: 79 rows with 8 processes, each process will read up to 10 rows
-        cols_per_process = std::numeric_limits<int>::infinity();
+        cols_per_process = 0;
+#if DEBUG_MAIN
+        std::cout << "Each process reads up to " << rows_per_process << " rows and all columns" << std::endl;
+#endif
     } else if (world_size <= columns){
         // just separate the columns
-        rows_per_process = std::numeric_limits<int>::infinity(); // es: 2000 columns with 8 processes, each process will read up to 250 columns
+        rows_per_process = 0; // es: 2000 columns with 8 processes, each process will read up to 250 columns
         cols_per_process = (int) ceil(rows/world_size);
+#if DEBUG_MAIN
+        std::cout << "Each process reads all rows and up to " << cols << " columns" << std::endl;
+#endif
     } else if (world_size <= rows * columns){
         // squares of rows and columns
         // TODO: fix
         rows_per_process = (int) ceil(sqrt(rows*cols/world_size));
         cols_per_process = (int) ceil(sqrt(rows*cols/world_size));
-
+#if DEBUG_MAIN
+        std::cout << "Each process reads up to " << rows_per_process << " rows and "<< cols<< "columns" << std::endl;
+#endif
     } else {
         rows_per_process=1;
         cols_per_process=1;
         processes_for_input_read = rows * columns;
+#if DEBUG_MAIN
+        std::cout << "Each process reads element. You should consider linear read" << std::endl;
+#endif
     }
 
 #if DEBUG_MAIN
     if(process_rank == 0){
         std::cout << "There are a total of " << world_size << " processes." << std::endl;
-        std::cout << "Each process reads " << rows_per_process << " rows and " << cols_per_process << " columns" << std::endl;
     }
 #endif
 
-    Matrix x = Matrix(cols, r); // create matrix
+
+    std::vector<double> final_x = std::vector<double>(r*cols);
     std::vector<int> y = std::vector<int>(r);
 
     std::vector<double> local_x = std::vector<double>(r*cols);
     std::vector<int> local_y = std::vector<int>(r);
+#if DEBUG_MAIN
+    std::cout << "Process rank: " << process_rank << std::endl;
+    std::cout << "Local size of matrix: " << r*cols << " ("<< r << " rows and " << cols << " columns" << std::endl;
+#endif
 #if PERFORMANCE_CHECK_MAIN
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
-    read_dataset_parallel(local_x, local_y, x.m_width, x.r,
-                          filepath,
-                          process_rank*rows_per_process,
-                          process_rank*cols_per_process,
-                          rows_per_process, cols_per_process,
-                          target_column,
-                          file_separator, ".");
-    MPI_Error_control = MPI_Allreduce(&local_x, &x.array, r*cols, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    if(process_rank <= processes_for_input_read ) {
+        read_dataset_parallel(local_x, local_y, cols, r,
+                              filepath,
+                              process_rank * rows_per_process,
+                              process_rank * cols_per_process,
+                              rows_per_process, cols_per_process,
+                              target_column,
+                              file_separator, ".");
+    }
+#if DEBUG_READ_DATA
+    std::cout << "final_x before reduce: " << std::endl;
+    Matrix::print(final_x,r,cols);
+
+    std::cout << "local x before reduce: " << std::endl;
+    Matrix::print(local_x,r,cols);
+
+    std::cout << "count for reduce: " << r*cols << std::endl;
+    std::cout << "Size of recvbuf: " << final_x.size() << std::endl;
+#endif
+    MPI_Error_control = MPI_Allreduce(&local_x, &final_x, r*cols, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     if(MPI_Error_control != MPI_SUCCESS){std::cout << "Error during x reduce" << std::endl; exit(1); }
+#if DEBUG_READ_DATA
+    std::cout << "X after reduce: " << std::endl;
+    Matrix::print(final_x,r,cols);
+#endif
     MPI_Error_control = MPI_Allreduce(&local_y, &y, r, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     if(MPI_Error_control != MPI_SUCCESS){std::cout << "Error during y reduce" << std::endl; exit(1); }
+#if DEBUG_READ_DATA
+    std::cout << "Y after reduce: " << std::endl;
+    for(int i : y){
+        std::cout << i << ", ";
+    }
+    std::cout << std::endl;
+#endif
 #if PERFORMANCE_CHECK_MAIN
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
+
+
+    Matrix x = Matrix(cols,r);
+    x.array = final_x;
     Dataset df = Dataset(x, y);
+
+    // delete unused things
+    std::vector<double>().swap(local_x);
+    std::vector<int>().swap(local_y);
+    //std::vector<double>().swap(final_x);
+    //std::vector<int>().swap(y);
 #if DEBUG_MAIN
     df.print_dataset(true);
 #endif
@@ -196,6 +245,13 @@ int main(int argc, char *argv[]) {
     for (double i : row) {
         std::cout << i << ", ";
     }
+
+    //TODO: capire cosa non va
+    std::cout << "\nClasses are: " << std::endl;
+    for (int i : df.unique_classes) {
+        std::cout << i << " ";
+    }
+
 
 #endif
     // Finalize the MPI environment.

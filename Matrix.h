@@ -12,6 +12,8 @@ the ith element in a Row (which is a T&)
 #include "iostream"
 #include "set"
 
+#define DEBUG_MATRIX true
+
 class Matrix {
 
 public:
@@ -40,14 +42,14 @@ public:
 
     std::vector<double> get_row(int row_index) const {
         std::vector<double> row;
-        for (int i = 0; i < m_width; i++) { row.push_back(this->at(row_index, i)); }
+        for (int i = 0; i <= m_width; i++) { row.push_back(this->at(row_index, i)); }
         row.pop_back();
         return row;
     }
 
     std::vector<double> get_col(int col_index) const {
         std::vector<double> column;
-        for (int i = 0; i < r; i++) { column.push_back(this->at(i, col_index)); }
+        for (int i = 0; i <= r; i++) { column.push_back(this->at(i, col_index)); }
         column.pop_back();
         return column;
     }
@@ -92,7 +94,7 @@ public:
     Matrix predictor_matrix; // predictors matrix
     std::vector<int> class_vector; // class output matrix
     std::vector<int> unique_classes;
-    int get_predictors_number() const { return c + 1; }
+    int get_predictors_number() const { return c; }
     int get_rows_number() const { return r; }
 
 
@@ -118,18 +120,28 @@ public: // constructors
         this->class_vector = {-1,1};
     }
 
-    Dataset(const Matrix &x, std::vector<int> y) {
+    Dataset(const Matrix &x, const std::vector<int>& y) {
         this->predictor_matrix = x;
-        this->class_vector = std::move(y);
-        this->c = x.get_columns_number();
+        this->class_vector = y;
+        this->c = x.get_columns_number()+1;
         this->r = x.get_rows_number();
 
-        // get unique elements
-        std::set<int> s;
-        unsigned size = y.size();
-        for( unsigned i = 0; i < size; ++i ) s.insert( y[i] );
-        unique_classes.assign( s.begin(), s.end() );
+        // NB: this works, bug in main
+        std::set<int> s( class_vector.begin(), class_vector.end() );
+        this->unique_classes.assign( s.begin(), s.end() );
 
+        // std::set<int> s;
+        // unsigned size = y.size();
+        // for( unsigned i = 0; i < size; ++i ) s.insert( y[i] );
+        // unique_classes.assign( s.begin(), s.end() );
+        // std::set<int>().swap(s);
+#if DEBUG_MATRIX
+        std::cout << "\nClasses are: " << std::endl;
+    for (int i : this->unique_classes) {
+        std::cout << i << " ";
+    }
+    std::cout << std::endl;
+#endif
     }
 
 
@@ -144,7 +156,7 @@ public: // presentation
 
             std::cout << "class vector:" << std::endl;
             for (auto i: class_vector)
-                std::cout << i << ' ';
+                std::cout << i << ", ";
         }
     }
 
