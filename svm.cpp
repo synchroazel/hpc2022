@@ -2,8 +2,8 @@
 #include <string>
 #include <vector>
 #include <cmath>
-// Original
-#include "svm.hpp"
+
+#include "svm.hpp"  // original
 
 #include "Dataset.h"
 
@@ -125,12 +125,40 @@ void Kernel_SVM::train(Dataset training_data,
     std::vector<std::vector<double>> class1_data;
     std::vector<std::vector<double>> class2_data;
 
-    for (size_t i = 0; i < training_data.get_rows_number(); i++) {
-        if (training_data.class_vector[i] == 0) {
-            class1_data.push_back(training_data.predictor_matrix.get_row(i));
-        } else if (training_data.class_vector[i] == 1) {
-            class2_data.push_back(training_data.predictor_matrix.get_row(i));
+    for (size_t i = 0; i < get_rows_num(training_data); i++) {
+
+        auto* cur_row = (double *) calloc(training_data.predictors_column_number, sizeof (double));
+        get_row(training_data, i, false,cur_row);
+
+        //convert cur_row to vector of doubles
+        std::vector<double> cur_row_vector;
+        for (size_t j = 0; j < training_data.predictors_column_number; j++) {
+            cur_row_vector.push_back(cur_row[j]);
         }
+
+        if (training_data.class_vector[i] == 0) {
+            class1_data.push_back(cur_row_vector);
+        } else if (training_data.class_vector[i] == 1) {
+            class2_data.push_back(cur_row_vector);
+        }
+    }
+
+    //print class1_data
+    std::cout << "\nclass1_data\n" << std::endl;
+    for (size_t i = 0; i < class1_data.size(); i++) {
+        for (size_t j = 0; j < class1_data[i].size(); j++) {
+            std::cout << class1_data[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    //print class2_data
+    std::cout << "\nclass2_data\n" << std::endl;
+    for (size_t i = 0; i < class2_data.size(); i++) {
+        for (size_t j = 0; j < class2_data[i].size(); j++) {
+            std::cout << class2_data[i][j] << " ";
+        }
+        std::cout << std::endl;
     }
 
     constexpr double eps = 0.0000001;
@@ -272,11 +300,21 @@ void Kernel_SVM::test(Dataset test_data) {
     std::vector<std::vector<double>> class1_data;
     std::vector<std::vector<double>> class2_data;
 
-    for (size_t i = 0; i < test_data.get_rows_number(); i++) {
+    for (size_t i = 0; i < get_rows_num(test_data); i++) {
+
+        auto* cur_row = (double *) calloc(test_data.predictors_column_number, sizeof (double));
+        get_row(test_data, i, false,cur_row);
+
+        //convert cur_row to vector of doubles
+        std::vector<double> cur_row_vector;
+        for (size_t j = 0; j < test_data.predictors_column_number; j++) {
+            cur_row_vector.push_back(cur_row[j]);
+        }
+
         if (test_data.class_vector[i] == 0) {
-            class1_data.push_back(test_data.predictor_matrix.get_row(i));
+            class1_data.push_back(cur_row_vector);
         } else if (test_data.class_vector[i] == 1) {
-            class2_data.push_back(test_data.predictor_matrix.get_row(i));
+            class2_data.push_back(cur_row_vector);
         }
     }
 
