@@ -1,9 +1,11 @@
 #include "iostream"
 #include "pre_process.h"
-#include "mpi.h"
+#include "boost/mpi.hpp"  // boost MPI
+#include "mpi.h"  // vanilla MPI
 #include "limits"
 #include <boost/program_options.hpp>
 
+//namespace mpi = boost::mpi;
 
 #define PERFORMANCE_CHECK_MAIN true
 #define DEBUG_MAIN true
@@ -57,9 +59,10 @@ int main(int argc, char *argv[]) {
     MPI_Init(nullptr, nullptr);
     /* MAURIZIO */
     //std::string filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/gene_expr.tsv"; // TODO: change to CLI args
-     std::string  filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/dummy.csv"; // TODO: change to CLI args
+    //std::string  filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/dummy.csv"; // TODO: change to CLI args
 
     /* ANTONIO */
+    std::string  filepath = "/Users/azel/Developer/hpc2022/data/dummy.csv"; // TODO: change to CLI args
     // std::string  filepath = "/Users/azel/Developer/hpc2022/data/gene_expr.tsv"; // TODO: change to CLI args
     // std::string filepath = "/Users/azel/Developer/hpc2022/data/iris.csv"; // TODO: change to CLI args
 
@@ -132,6 +135,7 @@ int main(int argc, char *argv[]) {
         cols_per_process = (int) ceil(rows/world_size);
 #if DEBUG_MAIN
         std::cout << "Each process reads all rows and up to " << cols << " columns" << std::endl;
+
 #endif
     } else if (world_size <= rows * columns){
         // squares of rows and columns
@@ -189,8 +193,28 @@ int main(int argc, char *argv[]) {
     std::cout << "count for reduce: " << r*cols << std::endl;
     std::cout << "Size of recvbuf: " << final_x.size() << std::endl;
 #endif
-    MPI_Error_control = MPI_Allreduce(&local_x, &final_x, r*cols, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    std::cout << "BEFORE:\n"<< std::endl;
+    std::cout << "r:\n" << r << std::endl;
+    std::cout << "cols:\n" << cols << std::endl;
+
+    int size = r*cols;
+    std::cout << "size:\n" << size << std::endl;
+
+//    double* local_x_ptr = &local_x[0];
+//    double* final_x_ptr = &final_x[0];
+
+    //MPI_Error_control = MPI_Allreduce(&local_x, &final_x, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    boost::mpi::communicator world;
+
+    boost::mpi::all_reduce(world, &local_x, r*cols, &final_x, std::plus<>());
     if(MPI_Error_control != MPI_SUCCESS){std::cout << "Error during x reduce" << std::endl; exit(1); }
+
+    std::cout << "AFTER:\n"<< std::endl;
+    std::cout << "r:\n" << r << std::endl;
+    std::cout << "cols:\n" << cols << std::endl;
+
 #if DEBUG_READ_DATA
     std::cout << "X after reduce: " << std::endl;
     Matrix::print(final_x,r,cols);
@@ -210,14 +234,24 @@ int main(int argc, char *argv[]) {
 
 
     Matrix x = Matrix(cols,r);
+
+
+
     x.array = final_x;
+
+
     Dataset df = Dataset(x, y);
 
     // delete unused things
     std::vector<double>().swap(local_x);
     std::vector<int>().swap(local_y);
-    //std::vector<double>().swap(final_x);
-    //std::vector<int>().swap(y);
+//    delete[] local_x_ptr;
+//    delete[] final_x_ptr;
+    std::vector<double>().swap(final_x);
+    std::vector<int>().swap(y);
+
+
+
 #if DEBUG_MAIN
     df.print_dataset(true);
 #endif
@@ -256,5 +290,6 @@ int main(int argc, char *argv[]) {
 #endif
     // Finalize the MPI environment.
     MPI_Finalize();
+    // exit(0);
     return 0; // everything went fine, yay
 }
