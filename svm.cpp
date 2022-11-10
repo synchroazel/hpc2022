@@ -5,7 +5,7 @@
 // Original
 #include "svm.hpp"
 
-#include "Matrix.h"
+#include "Dataset.h"
 
 // ---------------------------------------
 // namespace{kernel} -> function{linear}

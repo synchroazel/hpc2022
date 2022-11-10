@@ -5,7 +5,7 @@
 #include <vector>
 #include <functional>
 
-#include "Matrix.h"
+#include "Dataset.h"
 
 // -------------------
 // namespace{kernel}

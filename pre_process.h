@@ -7,63 +7,52 @@
 
 #include "vector"
 #include "fstream"
-#include "Matrix.h"
+#include "Dataset.h"
 #include "string"
 #include "boost/tokenizer.hpp" // for tokenization
 #include "regex"
 #include "limits"
 
 #define DEBUG_READ_DATA true
-//  TODO: parallelize with MPI?
-Dataset read_data_file_serial(const std::string& file_path, int rows, int columns, int target_column, char* separator,const std::string& comma_separator, bool skip_first_row=true, bool skip_first_column=true){
-/*expects a scv of double*/
+// NB: assumes pre_processed file
+Dataset read_data_file_serial(const std::string& file_path, int rows, int columns, int target_column, char* separator,const std::string& comma_separator){
+/*expects a csv of double*/
     // initialize
-    Matrix x = Matrix(columns, rows);
-#if DEBUG_READ_DATA
-    x.print(false);
-#endif
-    std::vector<int> y = std::vector<int>(rows);
-    int i=0, j; // column and row iterator
-    if(skip_first_column){target_column--;}
+    Dataset df;
 
-// TODO: read
+    double x[rows*columns];
+    int y[rows];
+    unsigned int i=0, j; // column and row iterator
+    unsigned int number_of_classes;
+
+#if DEBUG_READ_DATA
+    print_matrix(x,rows,columns, true);
+    print_vector(y,rows, true);
+#endif
+
     std::string line;
     std::ifstream file (file_path);
     if (file.is_open())
     {
-        if(skip_first_row){
-            getline (file,line);
-#if DEBUG_READ_DATA
-            std::cout << "Skipping first row of the csv file" << std::endl;
-#endif
-        }
+
         while ( getline (file,line) )
         {
-            j=-1;
+            j=0;
 
             boost::char_separator<char> sep(separator);
             boost::tokenizer< boost::char_separator<char> > tok(line, sep);
             for(boost::tokenizer< boost::char_separator<char> >::iterator beg = tok.begin(); beg != tok.end(); ++beg)
             {
-                if(skip_first_column && j == -1){
-                    j++;
-#if DEBUG_READ_DATA
-                    std::cout << "Skipping first column of the csv file" << std::endl;
-#endif
-                    continue;
-                } else if(!skip_first_column && j == -1){
-                    j++;
-                }
 
                 const std::string& value = *beg;
-                std::regex pattern ("^[0-9]"); // everything that is not a number
-                std::regex_replace(value, pattern,comma_separator); // will be converted into the separator
+                //std::regex pattern ("^[0-9]"); // everything that is not a number
+                //std::regex_replace(value, pattern,comma_separator); // will be converted into the separator
 
                 if(j+1 != target_column){
-                    x.modify_value(i,j, std::stod(value)); // to double NB: should fix
+                    modify_matrix_value(x,std::stod(value),i,j,columns); // to double NB: should fix
 #if DEBUG_READ_DATA
                     std::cout << "New value: " << value << " at " << i << ", " << j << std::endl;
-                    x.print(true);
+                    print_matrix(x,rows,columns);
 #endif
                 } else {
                     y[i] = std::stoi(value); // to int (will be a class)
@@ -82,81 +71,65 @@ Dataset read_data_file_serial(const std::string& file_path, int rows, int column
 
 
 // assign
-    Dataset ris = Dataset(x,y);
+    df.rows_number = rows;
+    df.predictors_column_number = columns-1; // NB: columns are the columns of the csv
+    df.class_vector = y;
+    df.predictor_matrix = x;
+    df.number_of_unique_classes = get_number_of_unique_classes(df.class_vector, df.rows_number);
+    df.unique_classes = (int*) calloc(df.number_of_unique_classes,sizeof(int));
+    get_unique_classes(df.class_vector, rows, df.number_of_unique_classes,df.unique_classes);
 
 // output feedback
 #if DEBUG_READ_DATA
-    ris.print_dataset(true);
-// #else
-//     ris.print(false);
+    print_dataset(df);
 #endif
 
-    return ris;
+    return df;
 }
+
 // TODO: fix
 void read_dataset_parallel(
-        std::vector<double>& x, /*out*/
-        std::vector<int>& y, /*out*/
-        int x_columns, int x_rows,
+        double* x, /*out*/
+        int* y, /*out*/
+        unsigned int x_columns, unsigned int x_rows,
         const std::string& file_path, /*in*/
-        int local_rows_start, int local_columns_start, /*in*/
-        int rows_to_read, int column_to_read, /*in*/
-        int target_column, /*in*/
-        char* separator, const std::string& comma_separator, /*in*/
-        bool skip_first_row=true, bool skip_first_column=true /*in*/
+        unsigned int local_rows_start, unsigned int local_columns_start, /*in*/
+        unsigned int rows_to_read, unsigned int column_to_read, /*in*/
+        unsigned int target_column, /*in*/
+        char* separator /*in*/
         ){
     /*expects a csv of double*/
     // initialize
     if(rows_to_read == 0){rows_to_read=std::numeric_limits<int>::max();}
     if(column_to_read == 0){column_to_read=std::numeric_limits<int>::max();}
 
-    int i=0, j; // column and row iterator
-    int read_rows=0, read_columns=0;
-
-    if(skip_first_column){target_column--;}
+    unsigned int i=0, j; // column and row iterator
+    unsigned int read_rows=0, read_columns=0;
 
     std::string line;
     std::ifstream file (file_path);
     if (file.is_open())
     {
-        if(skip_first_row){
-            getline (file,line);
-#if DEBUG_READ_DATA
-            std::cout << "Skipping first row of the csv file" << std::endl;
-#endif
-        }
         while ( getline (file,line) )
         {
             if(i < local_rows_start){ ++i; continue;} // skip until it reaches the desired start
-            j=-1;
+            j=0;
 
             boost::char_separator<char> sep(separator);
             boost::tokenizer< boost::char_separator<char> > tok(line, sep);
 
             for(boost::tokenizer< boost::char_separator<char> >::iterator beg = tok.begin(); beg != tok.end(); ++beg)
             {
-                if(skip_first_column && j == -1){
-                    ++j;
-#if DEBUG_READ_DATA
-                    std::cout << "Skipping first column of the csv file" << std::endl;
-#endif
-                    continue;
-                } else if(!skip_first_column && j == -1){
-                    ++j;
-                }
 
                 if(j < local_columns_start){++j; continue;} // skip columns
 
                 const std::string& value = *beg;
-                // TODO: decide preprocess steps
-                std::regex pattern ("^[0-9]"); // everything that is not a number
-                std::regex_replace(value, pattern,comma_separator); // will be converted into the separator
 
                 if(j+1 != target_column){
-                    Matrix::modify_value(x,i,j, x_columns, std::stod(value));
+                    modify_matrix_value(x, std::stod(value),i,j,x_columns);
 #if DEBUG_READ_DATA
                     std::cout << "New value: " << value << " at " << i << ", " << j << std::endl;
-                    Matrix::print(x, x_rows, x_columns);
+                    print_matrix(x, x_rows, x_columns);
 #endif
 
                 } else {
@@ -190,7 +163,7 @@ void read_dataset_parallel(
     }
 #if DEBUG_READ_DATA
     std::cout << "Final matrix:" << std::endl;
-    Matrix::print(x, x_rows, x_columns);
+    print_matrix(x, x_rows, x_columns);
 #endif
 }
 

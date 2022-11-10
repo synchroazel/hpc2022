@@ -1,6 +1,5 @@
 #include "iostream"
 #include "pre_process.h"
-#include "boost/mpi.hpp"  // boost MPI
 #include "mpi.h"  // vanilla MPI
 #include "limits"
 #include <boost/program_options.hpp>
@@ -18,7 +17,39 @@
 #define DEFAULT_SKIP_FIRST_ROW false
 #define DEFAULT_SKIP_FIRST_COLUMN false
 
-// TODO: everything concerning MPI
+// TODO: implement CLI args
+
+void build_mpi_datatype(MPI_Datatype* MPI_Dataset, Dataset df ){
+    // Create a new data type called "MPI_Matrix", to represent Matrix Class
+
+    int      count {6}; // 6 elements
+    int      block_lengths[6] = { /* lenght of elements*/
+            (int)(df.rows_number*df.predictors_column_number), /*predictor matrix*/
+            (int)(df.rows_number),/*class vector*/
+            1, /*predictors_column_number*/
+            1, /* rows_number */
+            (int)(df.number_of_unique_classes), /*unique classes*/
+            1 /*number of unique classes*/
+    };
+    MPI_Aint displacements[6]; // array of displacements
+    displacements[0] = offsetof (Dataset, predictor_matrix);
+    displacements[1] = offsetof (Dataset, class_vector);
+    displacements[2] = offsetof (Dataset, predictors_column_number);
+    displacements[3] = offsetof (Dataset, rows_number);
+    displacements[4] = offsetof (Dataset, unique_classes);
+    displacements[5] = offsetof (Dataset, number_of_unique_classes);
+    MPI_Datatype types[6] = {
+            MPI_DOUBLE, /*predictor matrix */
+            MPI_INT, /*class array*/
+            MPI_INT, /*predictors_column_number*/
+            MPI_INT, /* rows_number */
+            MPI_INT, /*unique classes*/
+            MPI_INT /*number of unique classes*/
+    };
+    MPI_Type_create_struct (count, block_lengths, displacements, types, MPI_Dataset);
+    MPI_Type_commit (MPI_Dataset);
+}
+
 
 int main(int argc, char *argv[]) {
     int MPI_Error_control = 0;
@@ -58,27 +89,24 @@ int main(int argc, char *argv[]) {
 #else
     MPI_Init(nullptr, nullptr);
     /* MAURIZIO */
-    //std::string filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/gene_expr.tsv"; // TODO: change to CLI args
-    //std::string  filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/dummy.csv"; // TODO: change to CLI args
+    //std::string filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/gene_expr.csv"; // TODO: change to CLI args
+    std::string  filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/dummy.csv"; // TODO: change to CLI args
 
     /* ANTONIO */
-    std::string  filepath = "/Users/azel/Developer/hpc2022/data/dummy.csv"; // TODO: change to CLI args
+    //std::string  filepath = "/Users/azel/Developer/hpc2022/data/dummy.csv"; // TODO: change to CLI args
     // std::string  filepath = "/Users/azel/Developer/hpc2022/data/gene_expr.tsv"; // TODO: change to CLI args
     // std::string filepath = "/Users/azel/Developer/hpc2022/data/iris.csv"; // TODO: change to CLI args
 
-    //char* file_separator = (char*)("\t");// TODO: change to CLI args
-    char *file_separator = (char *) (",");// TODO: change to CLI args
 
-    bool skip_first_row = true;// TODO: change to CLI args
-    bool skip_first_column = true;// TODO: change to CLI args
+    char *file_separator = (char *) (",");// TODO: change to CLI args
 
     // int rows = 79;// TODO: change to CLI args
     // int columns = 2002;// TODO: change to CLI args
     // int target_column = 2002;// TODO: change to CLI args
 
-    int rows = 5;// TODO: change to CLI args
-    int columns = 4;// TODO: change to CLI args
-    int target_column = 4;// TODO: change to CLI args
+    int rows = 4;// TODO: change to CLI args
+    int columns = 3;// TODO: change to CLI args
+    int target_column = 3;// TODO: change to CLI args
 #endif
 
     // Get the number of processes
@@ -91,31 +119,9 @@ int main(int argc, char *argv[]) {
 
 
     // to build matrix
-    int cols = columns-1;
+    int cols = columns-1; // because of the y column
     int r = rows;
-    if(skip_first_column)cols--;
-    if(skip_first_row)r--;
 
-
-    // Create a new data type called "MPI_Matrix", to represent Matrix Class
-    MPI_Datatype MPI_Matrix; // name
-    int      count {3}; // 3 elements
-    int      block_lengths[3] = { /* lenght of elements*/
-            cols * r, /* matrix */
-            1, /*m_width*/
-            1 /* r */
-    };
-    MPI_Aint displacements[3]; // array of displacements
-    displacements[0] = offsetof (Matrix, array);
-    displacements[1] = offsetof (Matrix, m_width);
-    displacements[2] = offsetof (Matrix, r);
-    MPI_Datatype types[3] = {
-            MPI_DOUBLE, /*matrix */
-            MPI_INT, /*m_width*/
-            MPI_INT /* r */
-    };
-   MPI_Type_create_struct (count, block_lengths, displacements, types, &MPI_Matrix);
-   MPI_Type_commit (&MPI_Matrix);
 
 #if PARALLELIZE_INPUT_READ
     // read mpi
@@ -161,11 +167,11 @@ int main(int argc, char *argv[]) {
 #endif
 
 
-    std::vector<double> final_x = std::vector<double>(r*cols);
-    std::vector<int> y = std::vector<int>(r);
+    auto* final_x = (double*) calloc(rows*columns,sizeof(double ));
+    auto* y = (int*) calloc(rows, sizeof (int));
 
-    std::vector<double> local_x = std::vector<double>(r*cols);
-    std::vector<int> local_y = std::vector<int>(r);
+    auto* local_x = (double*) calloc(rows*columns,sizeof(double ));
+    auto* local_y = (int*) calloc(rows, sizeof (int));
 #if DEBUG_MAIN
     std::cout << "Process rank: " << process_rank << std::endl;
     std::cout << "Local size of matrix: " << r*cols << " ("<< r << " rows and " << cols << " columns" << std::endl;
@@ -181,18 +187,17 @@ int main(int argc, char *argv[]) {
                               process_rank * cols_per_process,
                               rows_per_process, cols_per_process,
                               target_column,
-                              file_separator, ".");
+                              file_separator);
     }
 #if DEBUG_READ_DATA
     std::cout << "final_x before reduce: " << std::endl;
-    Matrix::print(final_x,r,cols);
+    print_matrix(final_x, r, cols, true);
 
     std::cout << "local x before reduce: " << std::endl;
-    Matrix::print(local_x,r,cols);
+    print_matrix(local_x, r, cols, true);
 
     std::cout << "count for reduce: " << r*cols << std::endl;
-    std::cout << "Size of recvbuf: " << final_x.size() << std::endl;
-#endif
+
 
     std::cout << "BEFORE:\n"<< std::endl;
     std::cout << "r:\n" << r << std::endl;
@@ -201,59 +206,44 @@ int main(int argc, char *argv[]) {
     int size = r*cols;
     std::cout << "size:\n" << size << std::endl;
 
-//    double* local_x_ptr = &local_x[0];
-//    double* final_x_ptr = &final_x[0];
+#endif
 
-    //MPI_Error_control = MPI_Allreduce(&local_x, &final_x, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-    boost::mpi::communicator world;
-
-    boost::mpi::all_reduce(world, &local_x, r*cols, &final_x, std::plus<>());
+    MPI_Error_control = MPI_Allreduce(local_x, final_x, r*cols, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     if(MPI_Error_control != MPI_SUCCESS){std::cout << "Error during x reduce" << std::endl; exit(1); }
-
+#if DEBUG_READ_DATA
     std::cout << "AFTER:\n"<< std::endl;
     std::cout << "r:\n" << r << std::endl;
     std::cout << "cols:\n" << cols << std::endl;
 
-#if DEBUG_READ_DATA
+
     std::cout << "X after reduce: " << std::endl;
-    Matrix::print(final_x,r,cols);
+    print_matrix(final_x, r, cols, true);
 #endif
-    MPI_Error_control = MPI_Allreduce(&local_y, &y, r, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Error_control = MPI_Allreduce(local_y, y, r, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     if(MPI_Error_control != MPI_SUCCESS){std::cout << "Error during y reduce" << std::endl; exit(1); }
 #if DEBUG_READ_DATA
     std::cout << "Y after reduce: " << std::endl;
-    for(int i : y){
-        std::cout << i << ", ";
-    }
+    print_vector(y,rows);
     std::cout << std::endl;
 #endif
 #if PERFORMANCE_CHECK_MAIN
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
+    free(local_x);
+    free(local_y);
 
-
-    Matrix x = Matrix(cols,r);
-
-
-
-    x.array = final_x;
-
-
-    Dataset df = Dataset(x, y);
-
-    // delete unused things
-    std::vector<double>().swap(local_x);
-    std::vector<int>().swap(local_y);
-//    delete[] local_x_ptr;
-//    delete[] final_x_ptr;
-    std::vector<double>().swap(final_x);
-    std::vector<int>().swap(y);
-
+    Dataset df;
+    df.rows_number = r;
+    df.predictor_matrix = final_x;
+    df.predictors_column_number = cols;
+    df.class_vector = y;
+    df.number_of_unique_classes = get_number_of_unique_classes(df.class_vector,df.rows_number);
+    df.unique_classes = (int*) calloc(df.number_of_unique_classes, sizeof(int));
+    get_unique_classes(df.class_vector, df.rows_number, df.number_of_unique_classes, df.unique_classes);
 
 
 #if DEBUG_MAIN
-    df.print_dataset(true);
+    print_dataset(df);
 #endif
 
 
@@ -267,29 +257,36 @@ int main(int argc, char *argv[]) {
 #if DEBUG_MAIN
 
     /* Try getting a column */
-    std::vector<double> col = df.predictor_matrix.get_col(0);
+    auto* col = (double *) calloc(df.rows_number, sizeof (double ));
+
+    std::cout << "Before get column:" << std::endl;
+    print_vector(col,df.rows_number);
+
+    get_x_column(df,0, col);
     std::cout << "\nColumn 0:\n";
-    for (double i : col) {
-        std::cout << i << ", ";
-    }
+    print_vector(col,df.rows_number);
+    free(col);
+
+    std::cout << "Column has been freed. Trying row now:" << std::endl;
 
     /* Try getting a row */
-    std::vector<double> row = df.predictor_matrix.get_row(0);
-    std::cout << "\nRow 0:\n";
-    for (double i : row) {
-        std::cout << i << ", ";
-    }
+    auto* row = (double *) calloc(df.predictors_column_number, sizeof (double ));
 
-    //TODO: capire cosa non va
-    std::cout << "\nClasses are: " << std::endl;
-    for (int i : df.unique_classes) {
-        std::cout << i << " ";
-    }
+    std::cout << "Before get row:" << std::endl;
+    print_vector(row,df.predictors_column_number);
+
+    get_row(df, 0, false,row);
+    std::cout << "\nRow 0:\n";
+    print_vector(row,df.predictors_column_number);
+    free(row);
+    std::cout << "Row has been freed." << std::endl;
 
 
 #endif
     // Finalize the MPI environment.
     MPI_Finalize();
+    free(final_x);
+    free(y);
     // exit(0);
     return 0; // everything went fine, yay
 }
