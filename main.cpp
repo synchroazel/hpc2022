@@ -90,12 +90,12 @@ int main(int argc, char *argv[]) {
 #else
     MPI_Init(nullptr, nullptr);
     /* MAURIZIO */
-    std::string filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/gene_expr.csv"; // TODO: change to CLI args
+    //std::string filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/gene_expr.csv"; // TODO: change to CLI args
     //std::string  filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/dummy.csv"; // TODO: change to CLI args
 
     /* ANTONIO */
-    //std::string  filepath = "/Users/azel/Developer/hpc2022/data/dummy.csv"; // TODO: change to CLI args
-    // std::string  filepath = "/Users/azel/Developer/hpc2022/data/gene_expr.tsv"; // TODO: change to CLI args
+    // std::string  filepath = "/Users/azel/Developer/hpc2022/data/dummy.csv"; // TODO: change to CLI args
+    std::string  filepath = "/Users/azel/Developer/hpc2022/data/gene_expr.csv"; // TODO: change to CLI args
     // std::string filepath = "/Users/azel/Developer/hpc2022/data/iris.csv"; // TODO: change to CLI args
 
 
@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
     int rows_per_process, cols_per_process, processes_for_input_read = world_size;
     if(world_size <= rows){
         // just separate the rows
-        rows_per_process = (int) std::ceil(rows/world_size); // es: 79 rows with 8 processes, each process will read up to 10 rows
+        rows_per_process = (int) std::ceil((double) rows/ (double) world_size); // es: 79 rows with 8 processes, each process will read up to 10 rows
         cols_per_process = 0;
 #if DEBUG_MAIN
         if(process_rank == MASTER_PROCESS){
