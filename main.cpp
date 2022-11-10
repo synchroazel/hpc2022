@@ -2,13 +2,15 @@
 #include "pre_process.h"
 #include "mpi.h"  // vanilla MPI
 #include "limits"
-# include "math.h"
+#include "math.h"
 #include <boost/program_options.hpp>
 
-//namespace mpi = boost::mpi;
+#include "svm.hpp"
+#include "svm.cpp"
 
 #define PERFORMANCE_CHECK_MAIN true
 #define DEBUG_MAIN true
+#define DEBUG_SVM true
 #define CLI_ARGS false
 #define PARALLELIZE_INPUT_READ true
 #define MASTER_PROCESS 0
@@ -17,6 +19,9 @@
 #define DEFAULT_CSV_SEPARATOR ","
 #define DEFAULT_SKIP_FIRST_ROW false
 #define DEFAULT_SKIP_FIRST_COLUMN false
+
+// function prototypes
+ void Set_Kernel(std::string ker_type, KernelFunc &K, std::vector<double> &params);
 
 // TODO: implement CLI args
 
@@ -91,19 +96,19 @@ int main(int argc, char *argv[]) {
     MPI_Init(nullptr, nullptr);
     /* MAURIZIO */
     //std::string filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/gene_expr.csv"; // TODO: change to CLI args
-    //std::string  filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/dummy.csv"; // TODO: change to CLI args
+    //std::string filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/dummy.csv"; // TODO: change to CLI args
 
     /* ANTONIO */
-    // std::string  filepath = "/Users/azel/Developer/hpc2022/data/dummy.csv"; // TODO: change to CLI args
-    std::string  filepath = "/Users/azel/Developer/hpc2022/data/gene_expr.csv"; // TODO: change to CLI args
-    // std::string filepath = "/Users/azel/Developer/hpc2022/data/iris.csv"; // TODO: change to CLI args
+    // std::string filepath = "/Users/azel/Developer/hpc2022/data/dummy.csv"; // TODO: change to CLI args
+    std::string filepath = "/Users/azel/Developer/hpc2022/data/iris_train.csv"; // TODO: change to CLI args
+    // std::string filepath = "/Users/azel/Developer/hpc2022/data/gene_expr.csv"; // TODO: change to CLI args
 
 
     char *file_separator = (char *) (",");// TODO: change to CLI args
 
-    int rows = 79;// TODO: change to CLI args
-    int columns = 2001;// TODO: change to CLI args
-    int target_column = 2001;// TODO: change to CLI args
+    int rows = 69;// TODO: change to CLI args
+    int columns = 5;// TODO: change to CLI args
+    int target_column = 5;// TODO: change to CLI args
 
    // int rows = 4;// TODO: change to CLI args
    // int columns = 3;// TODO: change to CLI args
@@ -297,7 +302,7 @@ int main(int argc, char *argv[]) {
         //std::cout << "Before get column:" << std::endl;
         //print_vector(col,df.rows_number);
 
-        get_x_column(df,0, col);
+        get_column(df,0, col);
         std::cout << "\nColumn 0:\n";
         print_vector(col,df.rows_number);
         free(col);
@@ -315,6 +320,29 @@ int main(int argc, char *argv[]) {
         print_vector(row,df.predictors_column_number);
         free(row);
         std::cout << "Row has been freed." << std::endl;
+
+#if DEBUG_SVM
+
+        /* Try SVM SERIAL IMPLEMENTATION */
+
+        std::string ker_type = "rbf";
+
+        KernelFunc K;
+        std::vector<double> params;
+        Set_Kernel(ker_type, K, params);
+
+        size_t D = 0;
+        double C = 0.1;
+        double lr = 0.0001;
+
+        Kernel_SVM svm(K, params, true);
+        svm.train(df, D, C, lr, 0.001);
+
+        // svm.test(df_test);
+
+
+#endif
+
     }
 
 
@@ -324,6 +352,27 @@ int main(int argc, char *argv[]) {
     MPI_Finalize();
     free(final_x);
     free(y);
-    // exit(0);
+
     return 0; // everything went fine, yay
+}
+
+
+// if Kernel is polynomial
+double c = 0.1;  // TODO: change to CLI args
+double d;  // TODO: change to CLI args
+
+// if Kernel is rbf
+double gamma = 1;  // TODO: change to CLI args
+
+void Set_Kernel(std::string ker_type, KernelFunc &K, std::vector<double> &params) {
+
+    if (ker_type == "linear") {
+        K = kernel::linear;
+    } else if (ker_type == "polynomial") {
+        K = kernel::polynomial;
+        params = {c, d};
+    } else if (ker_type == "rbf") {
+        K = kernel::rbf;
+        params = {gamma};
+    }
 }
