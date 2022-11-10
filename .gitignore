@@ -4,6 +4,7 @@ mpi_*
 **/cmake-build-debug/
 **/*.tsv
 **/*.csv
+**/*.bak*
 
 ### CVS template
 /CVS/*
