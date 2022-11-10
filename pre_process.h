@@ -13,7 +13,7 @@
 #include "regex"
 #include "limits"
 
-#define DEBUG_READ_DATA true
+#define DEBUG_READ_DATA false
 // NB: assumes pre_processed file
 Dataset read_data_file_serial(const std::string& file_path, int rows, int columns, int target_column, char* separator,const std::string& comma_separator){
 /*expects a csv of double*/
@@ -134,6 +134,10 @@ void read_dataset_parallel(
 
                 } else {
                     y[i] = std::stoi(value); // to int (will be a class)
+#if DEBUG_READ_DATA
+                    std::cout << "New value: " << value << " at " << i << " of class array" << std::endl;
+                    print_vector(y, x_rows, false);
+#endif
                 }
                 ++j;
                 ++read_columns;

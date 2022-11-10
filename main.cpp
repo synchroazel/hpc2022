@@ -2,6 +2,7 @@
 #include "pre_process.h"
 #include "mpi.h"  // vanilla MPI
 #include "limits"
+# include "math.h"
 #include <boost/program_options.hpp>
 
 //namespace mpi = boost::mpi;
@@ -89,8 +90,8 @@ int main(int argc, char *argv[]) {
 #else
     MPI_Init(nullptr, nullptr);
     /* MAURIZIO */
-    //std::string filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/gene_expr.csv"; // TODO: change to CLI args
-    std::string  filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/dummy.csv"; // TODO: change to CLI args
+    std::string filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/gene_expr.csv"; // TODO: change to CLI args
+    //std::string  filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/dummy.csv"; // TODO: change to CLI args
 
     /* ANTONIO */
     //std::string  filepath = "/Users/azel/Developer/hpc2022/data/dummy.csv"; // TODO: change to CLI args
@@ -100,13 +101,13 @@ int main(int argc, char *argv[]) {
 
     char *file_separator = (char *) (",");// TODO: change to CLI args
 
-    // int rows = 79;// TODO: change to CLI args
-    // int columns = 2002;// TODO: change to CLI args
-    // int target_column = 2002;// TODO: change to CLI args
+    int rows = 79;// TODO: change to CLI args
+    int columns = 2001;// TODO: change to CLI args
+    int target_column = 2001;// TODO: change to CLI args
 
-    int rows = 4;// TODO: change to CLI args
-    int columns = 3;// TODO: change to CLI args
-    int target_column = 3;// TODO: change to CLI args
+   // int rows = 4;// TODO: change to CLI args
+   // int columns = 3;// TODO: change to CLI args
+   // int target_column = 3;// TODO: change to CLI args
 #endif
 
     // Get the number of processes
@@ -127,41 +128,64 @@ int main(int argc, char *argv[]) {
     // read mpi
 
     //TODO: search for a better approach
+
+    // reading techniques
     int rows_per_process, cols_per_process, processes_for_input_read = world_size;
     if(world_size <= rows){
         // just separate the rows
-        rows_per_process = (int) ceil(rows/world_size); // es: 79 rows with 8 processes, each process will read up to 10 rows
+        rows_per_process = (int) std::ceil(rows/world_size); // es: 79 rows with 8 processes, each process will read up to 10 rows
         cols_per_process = 0;
 #if DEBUG_MAIN
-        std::cout << "Each process reads up to " << rows_per_process << " rows and all columns" << std::endl;
+        if(process_rank == MASTER_PROCESS){
+            std::cout << "Case 1: \nEach process reads up to " << rows_per_process << " rows and all columns" << std::endl;
+        }
+
 #endif
     } else if (world_size <= columns){
         // just separate the columns
         rows_per_process = 0; // es: 2000 columns with 8 processes, each process will read up to 250 columns
-        cols_per_process = (int) ceil(rows/world_size);
+        cols_per_process = (int) std::ceil(rows/world_size);
 #if DEBUG_MAIN
-        std::cout << "Each process reads all rows and up to " << cols << " columns" << std::endl;
+        if(process_rank == MASTER_PROCESS){
+            std::cout << "Case 2: \nEach process reads all rows and up to " << cols << " columns" << std::endl;
+        }
+
 
 #endif
     } else if (world_size <= rows * columns){
         // squares of rows and columns
-        // TODO: fix
-        rows_per_process = (int) ceil(sqrt(rows*cols/world_size));
-        cols_per_process = (int) ceil(sqrt(rows*cols/world_size));
+        // TODO: find a better way
+        if(rows > columns){
+            rows_per_process = rows;
+            cols_per_process = 0;
+            processes_for_input_read = rows;
+        } else {
+            rows_per_process = 0;
+            cols_per_process = columns;
+            processes_for_input_read = columns;
+        }
+
+
 #if DEBUG_MAIN
-        std::cout << "Each process reads up to " << rows_per_process << " rows and "<< cols<< "columns" << std::endl;
+        if(process_rank == MASTER_PROCESS){
+            std::cout << "Case 3: \nEach process reads up to " << rows_per_process << " rows and "<< cols_per_process << " columns" << std::endl;
+        }
+
 #endif
     } else {
         rows_per_process=1;
         cols_per_process=1;
         processes_for_input_read = rows * columns;
 #if DEBUG_MAIN
-        std::cout << "Each process reads element. You should consider linear read" << std::endl;
+        if(process_rank == MASTER_PROCESS){
+            std::cout << "Case 4: \nEach process reads element. You should consider linear read" << std::endl;
+        }
+
 #endif
     }
 
 #if DEBUG_MAIN
-    if(process_rank == 0){
+    if(process_rank == MASTER_PROCESS){
         std::cout << "There are a total of " << world_size << " processes." << std::endl;
     }
 #endif
@@ -173,8 +197,9 @@ int main(int argc, char *argv[]) {
     auto* local_x = (double*) calloc(rows*columns,sizeof(double ));
     auto* local_y = (int*) calloc(rows, sizeof (int));
 #if DEBUG_MAIN
-    std::cout << "Process rank: " << process_rank << std::endl;
-    std::cout << "Local size of matrix: " << r*cols << " ("<< r << " rows and " << cols << " columns" << std::endl;
+    std::cout << "\n\nProcess rank: " << process_rank << std::endl <<
+        "I will read from row " << process_rank * rows_per_process << " to " << process_rank * rows_per_process + rows_per_process - 1
+        << std::endl << "and from column " << process_rank * cols_per_process << " to column " << process_rank * cols_per_process + cols_per_process - 1 << "\n\n";
 #endif
 #if PERFORMANCE_CHECK_MAIN
     MPI_Barrier(MPI_COMM_WORLD);
@@ -190,41 +215,47 @@ int main(int argc, char *argv[]) {
                               file_separator);
     }
 #if DEBUG_READ_DATA
-    std::cout << "final_x before reduce: " << std::endl;
-    print_matrix(final_x, r, cols, true);
-
-    std::cout << "local x before reduce: " << std::endl;
-    print_matrix(local_x, r, cols, true);
-
-    std::cout << "count for reduce: " << r*cols << std::endl;
-
-
-    std::cout << "BEFORE:\n"<< std::endl;
-    std::cout << "r:\n" << r << std::endl;
-    std::cout << "cols:\n" << cols << std::endl;
-
-    int size = r*cols;
-    std::cout << "size:\n" << size << std::endl;
+    // std::cout << "final_x before reduce: " << std::endl;
+    // print_matrix(final_x, r, cols, true);
+//
+    // std::cout << "local x before reduce: " << std::endl;
+    // print_matrix(local_x, r, cols, true);
+//
+    // std::cout << "count for reduce: " << r*cols << std::endl;
+//
+//
+    // std::cout << "BEFORE:\n"<< std::endl;
+    // std::cout << "r:\n" << r << std::endl;
+    // std::cout << "cols:\n" << cols << std::endl;
+//
+    // int size = r*cols;
+    // std::cout << "size:\n" << size << std::endl;
 
 #endif
 
     MPI_Error_control = MPI_Allreduce(local_x, final_x, r*cols, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     if(MPI_Error_control != MPI_SUCCESS){std::cout << "Error during x reduce" << std::endl; exit(1); }
 #if DEBUG_READ_DATA
-    std::cout << "AFTER:\n"<< std::endl;
-    std::cout << "r:\n" << r << std::endl;
-    std::cout << "cols:\n" << cols << std::endl;
+    if(process_rank == MASTER_PROCESS){
+        std::cout << "AFTER:\n"<< std::endl;
+        std::cout << "r:\n" << r << std::endl;
+        std::cout << "cols:\n" << cols << std::endl;
 
 
-    std::cout << "X after reduce: " << std::endl;
-    print_matrix(final_x, r, cols, true);
+        std::cout << "X after reduce: " << std::endl;
+        print_matrix(final_x, r, cols, true);
+    }
+
 #endif
     MPI_Error_control = MPI_Allreduce(local_y, y, r, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     if(MPI_Error_control != MPI_SUCCESS){std::cout << "Error during y reduce" << std::endl; exit(1); }
 #if DEBUG_READ_DATA
-    std::cout << "Y after reduce: " << std::endl;
-    print_vector(y,rows);
-    std::cout << std::endl;
+    if(process_rank == MASTER_PROCESS){
+        std::cout << "Y after reduce: " << std::endl;
+        print_vector(y,rows);
+        std::cout << std::endl;
+    }
+
 #endif
 #if PERFORMANCE_CHECK_MAIN
     MPI_Barrier(MPI_COMM_WORLD);
@@ -243,7 +274,7 @@ int main(int argc, char *argv[]) {
 
 
 #if DEBUG_MAIN
-    print_dataset(df);
+    if(process_rank == MASTER_PROCESS) print_dataset(df, false);
 #endif
 
 
@@ -256,30 +287,36 @@ int main(int argc, char *argv[]) {
 
 #if DEBUG_MAIN
 
-    /* Try getting a column */
-    auto* col = (double *) calloc(df.rows_number, sizeof (double ));
 
-    std::cout << "Before get column:" << std::endl;
-    print_vector(col,df.rows_number);
+    MPI_Barrier(MPI_COMM_WORLD);
 
-    get_x_column(df,0, col);
-    std::cout << "\nColumn 0:\n";
-    print_vector(col,df.rows_number);
-    free(col);
+    if(process_rank == MASTER_PROCESS){
+        /* Try getting a column */
+        auto* col = (double *) calloc(df.rows_number, sizeof (double ));
 
-    std::cout << "Column has been freed. Trying row now:" << std::endl;
+        //std::cout << "Before get column:" << std::endl;
+        //print_vector(col,df.rows_number);
 
-    /* Try getting a row */
-    auto* row = (double *) calloc(df.predictors_column_number, sizeof (double ));
+        get_x_column(df,0, col);
+        std::cout << "\nColumn 0:\n";
+        print_vector(col,df.rows_number);
+        free(col);
 
-    std::cout << "Before get row:" << std::endl;
-    print_vector(row,df.predictors_column_number);
+        std::cout << "Column has been freed. Trying row now:" << std::endl;
 
-    get_row(df, 0, false,row);
-    std::cout << "\nRow 0:\n";
-    print_vector(row,df.predictors_column_number);
-    free(row);
-    std::cout << "Row has been freed." << std::endl;
+        /* Try getting a row */
+        auto* row = (double *) calloc(df.predictors_column_number, sizeof (double ));
+
+        //std::cout << "Before get row:" << std::endl;
+        //print_vector(row,df.predictors_column_number);
+
+        get_row(df, 0, false,row);
+        std::cout << "\nRow 0:\n";
+        print_vector(row,df.predictors_column_number);
+        free(row);
+        std::cout << "Row has been freed." << std::endl;
+    }
+
 
 
 #endif

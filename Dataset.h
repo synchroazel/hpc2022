@@ -124,10 +124,12 @@ void print_vector(T* x, unsigned int rows, bool metadata = false) {
     }
     std::cout << std::endl;
 }
-void print_dataset(Dataset df){
+void print_dataset(Dataset df, bool matrix=true){
     std::cout << "The dataset has " << df.rows_number << " rows and " << df.predictors_column_number+1 << " columns" << std::endl;
-    std::cout << "Preictor matrix:" << std::endl;
-    print_matrix(df.predictor_matrix, df.rows_number, df.predictors_column_number);
+    if(matrix){
+        std::cout << "Preictor matrix:" << std::endl;
+        print_matrix(df.predictor_matrix, df.rows_number, df.predictors_column_number);
+    }
     std::cout << "Class vector:" << std::endl;
     print_vector(df.class_vector, df.rows_number);
     std::cout << "Unique classes: (" << df.number_of_unique_classes << ")" << std::endl;
