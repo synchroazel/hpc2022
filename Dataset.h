@@ -49,7 +49,7 @@ void get_row(Dataset df, /*in*/
         ++i;
     }
 }
-void get_x_column(Dataset df, /*in*/
+void get_column(Dataset df, /*in*/
                   unsigned int column_index, /*in*/
                   double* output_buffer /*out*/) {
     int i=0;
@@ -57,6 +57,12 @@ void get_x_column(Dataset df, /*in*/
     for(; i < df.rows_number; i++){
         *(output_buffer + i) = get_x_element(df, i, column_index);
     }
+}
+unsigned int get_rows_num(Dataset df){
+    return df.rows_number;
+}
+unsigned int get_columns_num(Dataset df){
+    return df.predictors_column_number;
 }
 void get_unique_classes(int* classes_vector, /*in*/
                         unsigned int length, /*in*/
