@@ -3,14 +3,16 @@
 #include <vector>
 #include <cmath>
 
-#include "svm.hpp"  // original
+#include "svm.hpp"
 
 #include "Dataset.h"
 
 // ---------------------------------------
 // namespace{kernel} -> function{linear}
 // ---------------------------------------
-double kernel::linear(const std::vector<double> x1, const std::vector<double> x2, const std::vector<double> params) {
+double kernel::linear(const std::vector<double> x1,
+                      const std::vector<double> x2,
+                      const std::vector<double> params) {
 
     size_t i;
     double ans;
@@ -34,7 +36,9 @@ double kernel::linear(const std::vector<double> x1, const std::vector<double> x2
 // namespace{kernel} -> function{polynomial}
 // -------------------------------------------
 double
-kernel::polynomial(const std::vector<double> x1, const std::vector<double> x2, const std::vector<double> params) {
+kernel::polynomial(const std::vector<double> x1,
+                   const std::vector<double> x2,
+                   const std::vector<double> params) {
 
     size_t i;
     double ans;
@@ -62,7 +66,9 @@ kernel::polynomial(const std::vector<double> x1, const std::vector<double> x2, c
 // ------------------------------------
 // namespace{kernel} -> function{rbf}
 // ------------------------------------
-double kernel::rbf(const std::vector<double> x1, const std::vector<double> x2, const std::vector<double> params) {
+double kernel::rbf(const std::vector<double> x1,
+                   const std::vector<double> x2,
+                   const std::vector<double> params) {
 
     size_t i;
     double ans;
@@ -89,12 +95,13 @@ double kernel::rbf(const std::vector<double> x1, const std::vector<double> x2, c
 // ----------------------------------
 // class{Kernel_SVM} -> constructor
 // ----------------------------------
-Kernel_SVM::Kernel_SVM(const KernelFunc K_, const std::vector<double> params_, const bool verbose_) {
+Kernel_SVM::Kernel_SVM(const KernelFunc K_,
+                       const std::vector<double> params_,
+                       const bool verbose_) {
     this->K = K_;
     this->params = params_;
     this->verbose = verbose_;
 }
-
 
 // ------------------------------------
 // class{Kernel_SVM} -> function{log}
@@ -121,14 +128,13 @@ void Kernel_SVM::train(Dataset training_data,
 
 
     // split all training data into class1 and class2 data
-
     std::vector<std::vector<double>> class1_data;
     std::vector<std::vector<double>> class2_data;
 
-    for (size_t i = 0; i < get_rows_num(training_data); i++) {
+    for (size_t i = 0; i < training_data.rows_number; i++) {
 
-        auto* cur_row = (double *) calloc(training_data.predictors_column_number, sizeof (double));
-        get_row(training_data, i, false,cur_row);
+        auto *cur_row = (double *) calloc(training_data.predictors_column_number, sizeof(double));
+        get_row(training_data, i, false, cur_row);
 
         //convert cur_row to vector of doubles
         std::vector<double> cur_row_vector;
@@ -143,24 +149,6 @@ void Kernel_SVM::train(Dataset training_data,
         }
     }
 
-    //print class1_data
-    std::cout << "\nclass1_data\n" << std::endl;
-    for (size_t i = 0; i < class1_data.size(); i++) {
-        for (size_t j = 0; j < class1_data[i].size(); j++) {
-            std::cout << class1_data[i][j] << " ";
-        }
-        std::cout << std::endl;
-    }
-
-    //print class2_data
-    std::cout << "\nclass2_data\n" << std::endl;
-    for (size_t i = 0; i < class2_data.size(); i++) {
-        for (size_t j = 0; j < class2_data[i].size(); j++) {
-            std::cout << class2_data[i][j] << " ";
-        }
-        std::cout << std::endl;
-    }
-
     constexpr double eps = 0.0000001;
 
     size_t i, j;
@@ -172,7 +160,7 @@ void Kernel_SVM::train(Dataset training_data,
     double error;
     std::vector<std::vector<double>> x;
     std::vector<int> y;
-    std::vector<double> alpha;
+    // std::vector<double> alpha;
 
     // (1.1) Set class 1 data
     for (i = 0; i < class1_data.size(); i++) {
@@ -188,7 +176,9 @@ void Kernel_SVM::train(Dataset training_data,
 
     // (2) Set Lagrange Multiplier and Parameters
     N = x.size();
-    alpha = std::vector<double>(N, 0.0);
+
+    double alpha[N];
+
     beta = 1.0;
 
     // (3) Training
@@ -202,7 +192,8 @@ void Kernel_SVM::train(Dataset training_data,
         // (3.1) Update Alpha
         for (i = 0; i < N; i++) {
 
-            // Set item 1
+            // Compute the partial derivative with respect to alpha
+
             item1 = 0.0;
             for (j = 0; j < N; j++) {
                 item1 += alpha[j] * (double) y[i] * (double) y[j] * this->K(x[i], x[j], this->params);
@@ -214,7 +205,8 @@ void Kernel_SVM::train(Dataset training_data,
                 item2 += alpha[j] * (double) y[i] * (double) y[j];
             }
 
-            // Set Delta
+            // Set such partial derivative to Delta
+
             delta = 1.0 - item1 - beta * item2;
 
             // Update
@@ -230,7 +222,7 @@ void Kernel_SVM::train(Dataset training_data,
 
         }
 
-        // (3.2) Update Beta
+        // (3.2) Update bias Beta
         item3 = 0.0;
         for (i = 0; i < N; i++) {
             item3 += alpha[i] * (double) y[i];
@@ -253,6 +245,7 @@ void Kernel_SVM::train(Dataset training_data,
     this->xs_in = std::vector<std::vector<double>>();
     this->ys_in = std::vector<int>();
     this->alpha_s_in = std::vector<double>();
+
     for (i = 0; i < N; i++) {
         if ((eps < alpha[i]) && (alpha[i] < C - eps)) {
             this->xs.push_back(x[i]);
@@ -266,8 +259,72 @@ void Kernel_SVM::train(Dataset training_data,
             Ns_in++;
         }
     }
-    this->log("Ns (number of support vectors on margin) = " + std::to_string(Ns) + "\n");
-    this->log("Ns_in (number of support vectors inside margin) = " + std::to_string(Ns_in) + "\n");
+
+//    this->log("Ns (number of support vectors on margin) = " + std::to_string(Ns) + "\n");
+//
+//    this->log("Support vectors on margin:\n");
+//    for (i = 0; i < Ns; i++) {
+//        this->log("x = [");
+//        for (j = 0; j < this->xs[i].size(); j++) {
+//            this->log(std::to_string(this->xs[i][j]) + ", ");
+//        }
+//        this->log("], y = " + std::to_string(this->ys[i]) + ", alpha = " + std::to_string(this->alpha_s[i]) + "\n");
+//    }
+//
+//    this->log("Ns_in (number of support vectors inside margin) = " + std::to_string(Ns_in) + "\n");
+//
+//    this->log("Support vectors inside margin:\n");
+//
+//    for (i = 0; i < Ns_in; i++) {
+//        this->log("x = [");
+//        for (j = 0; j < this->xs_in[i].size(); j++) {
+//            this->log(std::to_string(this->xs_in[i][j]) + ", ");
+//        }
+//        this->log("], y = " + std::to_string(this->ys_in[i]) + ", alpha = " + std::to_string(this->alpha_s_in[i]) + "\n");
+//    }
+
+
+    /** Write all support vectors to file **/
+
+    std::ofstream myfile;
+
+    // If not exist, create directory to save the model params
+
+    std::string dir = "../saved_svm";
+    if (!std::__fs::filesystem::exists(dir)) {
+        std::__fs::filesystem::create_directory(dir);
+    }
+
+    myfile.open("../saved_svm/svm_params_on.csv");
+
+    /* Support vectors on margin */
+    /* x1, x2, ..., xn, y, alpha */
+
+    for (i = 0; i < Ns; i++) {
+        for (j = 0; j < this->xs[i].size(); j++) {
+            myfile << std::to_string(this->xs[i][j]) + ", ";
+        }
+        myfile << std::to_string(this->ys[i]) + ", " + std::to_string(this->alpha_s[i]) + "\n";
+    }
+
+    this->log("Support vectors on margin saved to svm_params_on.csv.\n");
+    myfile.close();
+
+    myfile.open("../saved_svm/svm_params_in.csv");
+
+    /* Support vectors inside margin */
+    /* x1, x2, ..., xn, y, alpha */
+
+    for (i = 0; i < Ns_in; i++) {
+        for (j = 0; j < this->xs_in[i].size(); j++) {
+            myfile << std::to_string(this->xs_in[i][j]) + ", ";
+        }
+        myfile << std::to_string(this->ys_in[i]) + ", " + std::to_string(this->alpha_s_in[i]) + "\n";
+    }
+
+    this->log("Support vectors inside margin saved to svm_params_in.csv.\n");
+    myfile.close();
+
 
     // (4.2) Description for b
     this->b = 0.0;
@@ -300,10 +357,10 @@ void Kernel_SVM::test(Dataset test_data) {
     std::vector<std::vector<double>> class1_data;
     std::vector<std::vector<double>> class2_data;
 
-    for (size_t i = 0; i < get_rows_num(test_data); i++) {
+    for (size_t i = 0; i < test_data.rows_number; i++) {
 
-        auto* cur_row = (double *) calloc(test_data.predictors_column_number, sizeof (double));
-        get_row(test_data, i, false,cur_row);
+        auto *cur_row = (double *) calloc(test_data.predictors_column_number, sizeof(double));
+        get_row(test_data, i, false, cur_row);
 
         //convert cur_row to vector of doubles
         std::vector<double> cur_row_vector;
