@@ -5,6 +5,7 @@ mpi_*
 **/*.tsv
 **/*.csv
 **/*.bak*
+**/*.dat
 
 ### CVS template
 /CVS/*

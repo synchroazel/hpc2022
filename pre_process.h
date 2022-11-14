@@ -15,14 +15,16 @@
 
 #define DEBUG_READ_DATA false
 // NB: assumes pre_processed file
-Dataset read_data_file_serial(const std::string& file_path, int rows, int columns, int target_column, char* separator,const std::string& comma_separator){
+
+Dataset read_dataset_serial(const std::string &file_path, int rows, int columns, int target_column, char *separator,
+                            const std::string &comma_separator) {
 /*expects a csv of double*/
     // initialize
     Dataset df;
 
-    double x[rows*columns];
+    double x[rows * columns];
     int y[rows];
-    unsigned int i=0, j; // column and row iterator
+    unsigned int i = 0, j; // column and row iterator
     unsigned int number_of_classes;
 
 #if DEBUG_READ_DATA
@@ -31,25 +33,22 @@ Dataset read_data_file_serial(const std::string& file_path, int rows, int column
 #endif
 
     std::string line;
-    std::ifstream file (file_path);
-    if (file.is_open())
-    {
+    std::ifstream file(file_path);
+    if (file.is_open()) {
 
-        while ( getline (file,line) )
-        {
-            j=0;
+        while (getline(file, line)) {
+            j = 0;
 
             boost::char_separator<char> sep(separator);
-            boost::tokenizer< boost::char_separator<char> > tok(line, sep);
-            for(boost::tokenizer< boost::char_separator<char> >::iterator beg = tok.begin(); beg != tok.end(); ++beg)
-            {
+            boost::tokenizer<boost::char_separator<char> > tok(line, sep);
+            for (boost::tokenizer<boost::char_separator<char> >::iterator beg = tok.begin(); beg != tok.end(); ++beg) {
 
-                const std::string& value = *beg;
+                const std::string &value = *beg;
                 //std::regex pattern ("^[0-9]"); // everything that is not a number
                 //std::regex_replace(value, pattern,comma_separator); // will be converted into the separator
 
-                if(j+1 != target_column){
-                    modify_matrix_value(x,std::stod(value),i,j,columns); // to double NB: should fix
+                if (j + 1 != target_column) {
+                    modify_matrix_value(x, std::stod(value), i, j, columns); // to double NB: should fix
 #if DEBUG_READ_DATA
                     std::cout << "New value: " << value << " at " << i << ", " << j << std::endl;
                     print_matrix(x,rows,columns);
@@ -60,7 +59,7 @@ Dataset read_data_file_serial(const std::string& file_path, int rows, int column
                 j++;
             }
             i++;
-            if(i >= rows){ break;}
+            if (i >= rows) { break; }
         }
         file.close();
 
@@ -72,12 +71,12 @@ Dataset read_data_file_serial(const std::string& file_path, int rows, int column
 
 // assign
     df.rows_number = rows;
-    df.predictors_column_number = columns-1; // NB: columns are the columns of the csv
+    df.predictors_column_number = columns - 1; // NB: columns are the columns of the csv
     df.class_vector = y;
     df.predictor_matrix = x;
     df.number_of_unique_classes = get_number_of_unique_classes(df.class_vector, df.rows_number);
-    df.unique_classes = (int*) calloc(df.number_of_unique_classes,sizeof(int));
-    get_unique_classes(df.class_vector, rows, df.number_of_unique_classes,df.unique_classes);
+    df.unique_classes = (int *) calloc(df.number_of_unique_classes, sizeof(int));
+    get_unique_classes(df.class_vector, rows, df.number_of_unique_classes, df.unique_classes);
 
 // output feedback
 #if DEBUG_READ_DATA
@@ -89,44 +88,47 @@ Dataset read_data_file_serial(const std::string& file_path, int rows, int column
 
 // TODO: fix
 void read_dataset_parallel(
-        double* x, /*out*/
-        int* y, /*out*/
+        double *x, /*out*/
+        int *y, /*out*/
         unsigned int x_columns, unsigned int x_rows,
-        const std::string& file_path, /*in*/
+        const std::string &file_path, /*in*/
         unsigned int local_rows_start, unsigned int local_columns_start, /*in*/
         unsigned int rows_to_read, unsigned int column_to_read, /*in*/
         unsigned int target_column, /*in*/
-        char* separator /*in*/
-        ){
+        char *separator /*in*/
+) {
     /*expects a csv of double*/
     // initialize
-    if(rows_to_read == 0){rows_to_read=std::numeric_limits<int>::max();}
-    if(column_to_read == 0){column_to_read=std::numeric_limits<int>::max();}
+    if (rows_to_read == 0) { rows_to_read = std::numeric_limits<int>::max(); }
+    if (column_to_read == 0) { column_to_read = std::numeric_limits<int>::max(); }
 
-    unsigned int i=0, j; // column and row iterator
-    unsigned int read_rows=0, read_columns=0;
+    unsigned int i = 0, j; // column and row iterator
+    unsigned int read_rows = 0, read_columns = 0;
 
     std::string line;
-    std::ifstream file (file_path);
-    if (file.is_open())
-    {
-        while ( getline (file,line) )
-        {
-            if(i < local_rows_start){ ++i; continue;} // skip until it reaches the desired start
-            j=0;
+    std::ifstream file(file_path);
+    if (file.is_open()) {
+        while (getline(file, line)) {
+            if (i < local_rows_start) {
+                ++i;
+                continue;
+            } // skip until it reaches the desired start
+            j = 0;
 
             boost::char_separator<char> sep(separator);
-            boost::tokenizer< boost::char_separator<char> > tok(line, sep);
+            boost::tokenizer<boost::char_separator<char> > tok(line, sep);
 
-            for(boost::tokenizer< boost::char_separator<char> >::iterator beg = tok.begin(); beg != tok.end(); ++beg)
-            {
+            for (boost::tokenizer<boost::char_separator<char> >::iterator beg = tok.begin(); beg != tok.end(); ++beg) {
 
-                if(j < local_columns_start){++j; continue;} // skip columns
+                if (j < local_columns_start) {
+                    ++j;
+                    continue;
+                } // skip columns
 
-                const std::string& value = *beg;
+                const std::string &value = *beg;
 
-                if(j+1 != target_column){
-                    modify_matrix_value(x, std::stod(value),i,j,x_columns);
+                if (j + 1 != target_column) {
+                    modify_matrix_value(x, std::stod(value), i, j, x_columns);
 #if DEBUG_READ_DATA
                     std::cout << "New value: " << value << " at " << i << ", " << j << std::endl;
                     print_matrix(x, x_rows, x_columns);
@@ -141,7 +143,7 @@ void read_dataset_parallel(
                 }
                 ++j;
                 ++read_columns;
-                if(read_columns >= column_to_read){
+                if (read_columns >= column_to_read) {
 #if DEBUG_READ_DATA
                     std::cout << "No more columns to read, next row" << std::endl;
 #endif
@@ -151,7 +153,7 @@ void read_dataset_parallel(
             }
             ++i;
             ++read_rows;
-            if(read_rows >= rows_to_read || i >= x_rows){
+            if (read_rows >= rows_to_read || i >= x_rows) {
 #if DEBUG_READ_DATA
                 std::cout << "No more rows to read, closing file." << std::endl;
 #endif

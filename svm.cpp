@@ -4,8 +4,14 @@
 #include <cmath>
 
 #include "svm.hpp"
+#include "fstream"
 
 #include "Dataset.h"
+
+
+#define WRITE_SV_TO_CSV true
+#define DEBUG_SUPPORT_VECTORS false
+
 
 // ---------------------------------------
 // namespace{kernel} -> function{linear}
@@ -92,17 +98,6 @@ double kernel::rbf(const std::vector<double> x1,
 }
 
 
-// ----------------------------------
-// class{Kernel_SVM} -> constructor
-// ----------------------------------
-Kernel_SVM::Kernel_SVM(const KernelFunc K_,
-                       const std::vector<double> params_,
-                       const bool verbose_) {
-    this->K = K_;
-    this->params = params_;
-    this->verbose = verbose_;
-}
-
 // ------------------------------------
 // class{Kernel_SVM} -> function{log}
 // ------------------------------------
@@ -117,11 +112,7 @@ void Kernel_SVM::log(const std::string str) {
 // --------------------------------------
 // class{Kernel_SVM} -> function{train}
 // --------------------------------------
-
-// void Kernel_SVM::train(const std::vector<std::vector<double>> class1_data, const std::vector<std::vector<double>> class2_data, const size_t D, const double C, const double lr, const double limit){
-
 void Kernel_SVM::train(Dataset training_data,
-                       const size_t D,
                        const double C,
                        const double lr,
                        const double limit) {
@@ -246,43 +237,95 @@ void Kernel_SVM::train(Dataset training_data,
     this->ys_in = std::vector<int>();
     this->alpha_s_in = std::vector<double>();
 
+
     for (i = 0; i < N; i++) {
         if ((eps < alpha[i]) && (alpha[i] < C - eps)) {
             this->xs.push_back(x[i]);
             this->ys.push_back(y[i]);
             this->alpha_s.push_back(alpha[i]);
+
+
+            for (size_t j = 0; j < training_data.predictors_column_number; j++) {
+                this->arr_xs[Ns][j] = x[i][j];
+            }
+
+            this->arr_ys[Ns] = y[i];
+            this->arr_alpha_s[Ns] = alpha[i];
+
             Ns++;
+
         } else if (alpha[i] >= C - eps) {
             this->xs_in.push_back(x[i]);
             this->ys_in.push_back(y[i]);
             this->alpha_s_in.push_back(alpha[i]);
+
+
+            for (size_t j = 0; j < training_data.predictors_column_number; j++) {
+                this->arr_xs_in[Ns_in][j] = x[i][j];
+            }
+
+            this->arr_ys_in[Ns_in] = y[i];
+            this->arr_alpha_s_in[Ns_in] = alpha[i];
+
             Ns_in++;
         }
+
     }
 
-//    this->log("Ns (number of support vectors on margin) = " + std::to_string(Ns) + "\n");
-//
-//    this->log("Support vectors on margin:\n");
-//    for (i = 0; i < Ns; i++) {
-//        this->log("x = [");
-//        for (j = 0; j < this->xs[i].size(); j++) {
-//            this->log(std::to_string(this->xs[i][j]) + ", ");
-//        }
-//        this->log("], y = " + std::to_string(this->ys[i]) + ", alpha = " + std::to_string(this->alpha_s[i]) + "\n");
-//    }
-//
-//    this->log("Ns_in (number of support vectors inside margin) = " + std::to_string(Ns_in) + "\n");
-//
-//    this->log("Support vectors inside margin:\n");
-//
-//    for (i = 0; i < Ns_in; i++) {
-//        this->log("x = [");
-//        for (j = 0; j < this->xs_in[i].size(); j++) {
-//            this->log(std::to_string(this->xs_in[i][j]) + ", ");
-//        }
-//        this->log("], y = " + std::to_string(this->ys_in[i]) + ", alpha = " + std::to_string(this->alpha_s_in[i]) + "\n");
-//    }
 
+
+#if DEBUG_SUPPORT_VECTORS
+
+    //print this->xs
+    this->log("xs:\n");
+    for (i = 0; i < this->xs.size(); i++) {
+        for (j = 0; j < this->xs[i].size(); j++) {
+            this->log(std::to_string(this->xs[i][j]) + " ");
+        }
+        this->log("\n");
+    }
+
+    //print this->ys
+    this->log("ys: ");
+    for (i = 0; i < this->ys.size(); i++) {
+        this->log(std::to_string(this->arr_ys[i]) + " ");
+    } this->log("\n");
+
+    //print this->alpha_s
+    this->log("alpha_s: ");
+    for (i = 0; i < this->alpha_s.size(); i++) {
+        this->log(std::to_string(this->arr_alpha_s[i]) + " ");
+    } this->log("\n");
+
+    //print this->xs_in
+    this->log("xs_in:\n");
+    for (i = 0; i < this->xs_in.size(); i++) {
+        for (j = 0; j < this->xs_in[i].size(); j++) {
+            this->log(std::to_string(this->xs_in[i][j]) + " ");
+        }
+        this->log(" | ");
+    }
+
+    //print this->ys_in
+    this->log("ys_in: ");
+    for (i = 0; i < this->ys_in.size(); i++) {
+        this->log(std::to_string(this->arr_ys_in[i]) + " ");
+    } this->log("\n");
+
+    //print this->alpha_s_in
+    this->log("alpha_s_in: ");
+    for (i = 0; i < this->alpha_s_in.size(); i++) {
+        this->log(std::to_string(this->arr_alpha_s_in[i]) + " ");
+    } this->log("\n");
+
+#endif
+
+    this->log("Ns (number of support vectors on margin) = " + std::to_string(Ns) + "\n");
+
+    this->log("Ns_in (number of support vectors inside margin) = " + std::to_string(Ns_in) + "\n");
+
+
+#if WRITE_SV_TO_CSV
 
     /** Write all support vectors to file **/
 
@@ -295,7 +338,7 @@ void Kernel_SVM::train(Dataset training_data,
         std::__fs::filesystem::create_directory(dir);
     }
 
-    myfile.open("../saved_svm/svm_params_on.csv");
+    myfile.open("../saved_svm/sv_on.csv");
 
     /* Support vectors on margin */
     /* x1, x2, ..., xn, y, alpha */
@@ -304,13 +347,13 @@ void Kernel_SVM::train(Dataset training_data,
         for (j = 0; j < this->xs[i].size(); j++) {
             myfile << std::to_string(this->xs[i][j]) + ", ";
         }
-        myfile << std::to_string(this->ys[i]) + ", " + std::to_string(this->alpha_s[i]) + "\n";
+        myfile << std::to_string(this->ys[i]) + ", " + std::to_string(this->arr_alpha_s[i]) + "\n";
     }
 
-    this->log("Support vectors on margin saved to svm_params_on.csv.\n");
+    this->log("Support vectors on margin saved to sv_on.csv.\n");
     myfile.close();
 
-    myfile.open("../saved_svm/svm_params_in.csv");
+    myfile.open("../saved_svm/sv_in.csv");
 
     /* Support vectors inside margin */
     /* x1, x2, ..., xn, y, alpha */
@@ -319,23 +362,26 @@ void Kernel_SVM::train(Dataset training_data,
         for (j = 0; j < this->xs_in[i].size(); j++) {
             myfile << std::to_string(this->xs_in[i][j]) + ", ";
         }
-        myfile << std::to_string(this->ys_in[i]) + ", " + std::to_string(this->alpha_s_in[i]) + "\n";
+        myfile << std::to_string(this->arr_ys_in[i]) + ", " + std::to_string(this->arr_alpha_s_in[i]) + "\n";
     }
 
-    this->log("Support vectors inside margin saved to svm_params_in.csv.\n");
+    this->log("Support vectors inside margin saved to sv_in.csv.\n");
     myfile.close();
 
+#endif
 
-    // (4.2) Description for b
+    // Update the bias
     this->b = 0.0;
     for (i = 0; i < Ns; i++) {
         this->b += (double) this->ys[i];
         for (j = 0; j < Ns; j++) {
-            this->b -= this->alpha_s[j] * (double) this->ys[j] * this->K(this->xs[j], this->xs[i], this->params);
+            this->b -=
+                    this->arr_alpha_s[j] * (double) this->arr_ys[j] * this->K(this->xs[j], this->xs[i], this->params);
         }
         for (j = 0; j < Ns_in; j++) {
             this->b -=
-                    this->alpha_s_in[j] * (double) this->ys_in[j] * this->K(this->xs_in[j], this->xs[i], this->params);
+                    this->arr_alpha_s_in[j] * (double) this->arr_ys_in[j] *
+                    this->K(this->xs_in[j], this->xs[i], this->params);
         }
     }
     this->b /= (double) Ns;
@@ -437,4 +483,20 @@ double Kernel_SVM::g(const std::vector<double> x) {
     }
 
     return gx;
+}
+
+
+void Set_Kernel(std::string ker_type,
+                KernelFunc &K,
+                std::vector<double> &params) {
+
+    if (ker_type == "linear") {
+        K = kernel::linear;
+    } else if (ker_type == "polynomial") {
+        K = kernel::polynomial;
+        // params = {c, d};
+    } else if (ker_type == "rbf") {
+        K = kernel::rbf;
+        // params = {gamma};
+    }
 }
