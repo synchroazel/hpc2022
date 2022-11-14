@@ -28,6 +28,60 @@ typedef std::function<double(const std::vector<double>, const std::vector<double
                              const std::vector<double>)> KernelFunc;
 
 
+
+/**
+ * Struct for SVM object
+ */
+
+
+
+typedef struct Kernel_SVM {
+
+    double *arr_xs;  // matrix
+    int *arr_ys;
+    double *arr_alpha_s;
+    double *arr_xs_in;  //matrix
+    int *arr_ys_in;
+    double *arr_alpha_s_in;
+    double b;
+
+    double accuracy;
+    double accuracy_c1, accuracy_c2;
+    size_t correct_c1, correct_c2;
+
+    const KernelFunc K;
+    const double params;  // TODO : check for params
+    const bool verbose;
+
+
+    void* serialize() {  // TODO : edit
+        std::ofstream outfile("../model.dat");
+        boost::archive::text_oarchive archive(outfile);
+        archive << *this;
+    }
+
+    void* deserialize() {  // TODO : edit
+        std::ifstream infile("../model.dat");
+        boost::archive::text_iarchive archive(infile);
+        archive >> *this;
+    }
+
+    void* train(Dataset training_data, const double C, const double lr, const double limit = 0.0001);
+
+    void* test(Dataset test_data);
+
+    double* f(const double x);
+
+    double* g(const double x);
+
+
+} Kernel_SVM;
+
+
+
+
+
+
 // -------------------
 // class{Kernel_SVM}
 // -------------------
