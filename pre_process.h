@@ -76,7 +76,7 @@ Dataset read_dataset_serial(const std::string &file_path, int rows, int columns,
     df.predictor_matrix = x;
     df.number_of_unique_classes = get_number_of_unique_classes(df.class_vector, df.rows_number);
     df.unique_classes = (int *) calloc(df.number_of_unique_classes, sizeof(int));
-    get_unique_classes(df.class_vector, rows, df.number_of_unique_classes, df.unique_classes);
+    get_unique_classes(df.class_vector, rows, df.unique_classes);
 
 // output feedback
 #if DEBUG_READ_DATA

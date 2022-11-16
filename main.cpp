@@ -3,14 +3,14 @@
 
 #include "Dataset.h"
 
-#include "svm.hpp"
+//#include "svm.hpp"
 #include "svm.cpp"
 
 #include "read_dataset.h"
 
 
 /* Macro to switch modes */
-#define TRAIN true
+#define DEBUG_TRAIN true
 #define CLI_ARGS false
 
 
@@ -28,6 +28,8 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &process_rank);
 
     /* --------------------------------------------------- */
+
+    int control;
 
 
 #if CLI_ARGS
@@ -65,34 +67,30 @@ int main(int argc, char *argv[]) {
 #endif
 
 
-#if TRAIN
-
-    std::string filepath = "/Users/azel/Developer/hpc2022/data/iris_train.csv";
+#if DEBUG_TRAIN
+    std::string filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
 
     Dataset df_train = read_dataset(filepath, 70, 5, 5);
 
+    // TODO: change to new logic
     if (process_rank == MASTER_PROCESS) {
 
-        std::string ker_type = "rbf";
+       char ker_type = 'l';
 
-        KernelFunc K;
-        std::vector<double> params = {1};
-        Set_Kernel(ker_type, K, params);
+       Kernel_SVM svm;
+       set_kernel_function(&svm, ker_type);
+       svm.verbose= true;
 
-        double C = 0.1;
-        double lr = 0.0001;
+       double Cost = 0.1;
+       double gamma = 0.1;
+       double coef0 = 0;
+       double degree = 1;
+       double params[4] = {Cost,gamma,coef0,degree};
 
-        Kernel_SVM svm(K, params, true);
-        svm.train(df_train, C, lr, 0.5);
+       double lr = 0.0001;
+       double limit = 0.5;
 
-
-        {
-            std::ofstream outfile("../model.dat");
-            boost::archive::text_oarchive archive(outfile);
-            archive << svm;
-        }
-
-
+       train(df_train, &svm, params, lr, limit);
     }
 
 #else

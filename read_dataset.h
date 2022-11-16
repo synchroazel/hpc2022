@@ -6,7 +6,8 @@
 //#include "math.h"
 
 #define MASTER_PROCESS 0
-
+#define DEBUG_READ_DATASET false
+#define PERFORMANCE_CHECK true
 void build_mpi_datatype(MPI_Datatype *MPI_Dataset, Dataset df) {
 
     /**
@@ -41,7 +42,7 @@ void build_mpi_datatype(MPI_Datatype *MPI_Dataset, Dataset df) {
     MPI_Type_commit(MPI_Dataset);
 }
 
-Dataset read_dataset(std::string filepath, int rows, int columns, int target_column) {
+Dataset read_dataset(const std::string& filepath, int rows, int columns, int target_column) {
 
     /**
      * Read dataset from a file, given filepath, rows, columns and target column
@@ -64,7 +65,6 @@ Dataset read_dataset(std::string filepath, int rows, int columns, int target_col
     int cols = columns - 1; // because of the y column
     int r = rows;
 
-    //TODO: search for a better approach
 
     // reading techniques
     int rows_per_process, cols_per_process, processes_for_input_read = world_size;
@@ -125,14 +125,16 @@ Dataset read_dataset(std::string filepath, int rows, int columns, int target_col
 
     auto *local_x = (double *) calloc(rows * columns, sizeof(double));
     auto *local_y = (int *) calloc(rows, sizeof(int));
-
+#if DEBUG_READ_DATASET
     std::cout << "\n\nProcess rank: " << process_rank << std::endl <<
               "I will read from row " << process_rank * rows_per_process << " to "
               << process_rank * rows_per_process + rows_per_process - 1
               << std::endl << "and from column " << process_rank * cols_per_process << " to column "
               << process_rank * cols_per_process + cols_per_process - 1 << "\n\n";
-
+#endif
+#if PERFORMANCE_CHECK
     MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
     if (process_rank <= processes_for_input_read) {
 
@@ -174,12 +176,13 @@ Dataset read_dataset(std::string filepath, int rows, int columns, int target_col
     df.class_vector = y;
     df.number_of_unique_classes = get_number_of_unique_classes(df.class_vector, df.rows_number);
     df.unique_classes = (int *) calloc(df.number_of_unique_classes, sizeof(int));
-    get_unique_classes(df.class_vector, df.rows_number, df.number_of_unique_classes, df.unique_classes);
+    get_unique_classes(df.class_vector, df.rows_number, df.unique_classes);
 
     MPI_Barrier(MPI_COMM_WORLD);
 
+#if DEBUG_READ_DATASET
     if (process_rank == MASTER_PROCESS) print_dataset(df, true);
-
+#endif
     return df;
 
 }

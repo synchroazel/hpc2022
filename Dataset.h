@@ -30,13 +30,33 @@ unsigned int index(unsigned int row, unsigned int column, unsigned int column_wi
     return row * column_width + column;
 }
 
-double get_x_element(Dataset df, unsigned int row, unsigned int column) {
+double get_x_element(const Dataset& df, unsigned int row, unsigned int column) {
     return *(df.predictor_matrix + index(row, column, df.predictors_column_number));
 }
+// utility functions (matrix)
+void get_row(const double * x, /*in*/
+             unsigned int row_index, /*in*/
+             unsigned int column_width, /*in*/
+             double *output_buffer) {
 
+    for(int j=0; j < column_width; j++){
+        *(output_buffer + j) = *(x+ index(row_index,j,column_width));
+    }
+}
 
-// utility functions
-void get_row(Dataset df, /*in*/
+void get_column(const double *x, /*in*/
+                unsigned int column_index, /*in*/
+                unsigned int column_width, /*in*/
+                unsigned int row_width,
+                double *output_buffer /*out*/) {
+
+    for (int i = 0; i < row_width; i++) {
+        *(output_buffer + i) = *(x + index(i,column_index, column_width));
+    }
+}
+
+// utility functions (dataset)
+void get_row(const Dataset& df, /*in*/
              unsigned int row_index, /*in*/
              bool include_y, /*in*/
              double *output_buffer /*out*/) {
@@ -51,7 +71,7 @@ void get_row(Dataset df, /*in*/
     }
 }
 
-void get_column(Dataset df, /*in*/
+void get_column(const Dataset& df, /*in*/
                 unsigned int column_index, /*in*/
                 double *output_buffer /*out*/) {
     int i = 0;
@@ -63,7 +83,6 @@ void get_column(Dataset df, /*in*/
 
 void get_unique_classes(int *classes_vector, /*in*/
                         unsigned int length, /*in*/
-                        unsigned int number_of_unique_classes,
                         int *output_buffer) {
 
 
@@ -99,6 +118,14 @@ int get_number_of_unique_classes(int *classes_vector, /*in*/
 void modify_matrix_value(double *x, double value, unsigned int row, unsigned int column, unsigned int column_width) {
     *(x + index(row, column, column_width)) = value;
 }
+void set_row_values(double *x, const double *row_values, unsigned int row, unsigned int column_width){
+    // TODO: search for a better approach
+
+    memcpy(x + index(row, 0, column_width), row_values, column_width);
+    // for(int i=0; i < column_width; i++){
+    //     modify_matrix_value(x, *(row_values + i), row, i, column_width);
+    // }
+}
 
 
 // presentation
@@ -131,7 +158,7 @@ void print_vector(T *x, unsigned int rows, bool metadata = false) {
     std::cout << std::endl;
 }
 
-void print_dataset(Dataset df, bool matrix = true) {
+void print_dataset(const Dataset& df, bool matrix = true) {
     std::cout << "The dataset has " << df.rows_number << " rows and " << df.predictors_column_number + 1 << " columns"
               << std::endl;
     if (matrix) {
