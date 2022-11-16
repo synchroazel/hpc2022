@@ -81,14 +81,14 @@ int main(int argc, char *argv[]) {
        set_kernel_function(&svm, ker_type);
        svm.verbose= true;
 
-       double Cost = 0.1;
+       double Cost = 5;
        double gamma = 0.1;
        double coef0 = 0;
        double degree = 1;
        double params[4] = {Cost,gamma,coef0,degree};
 
        double lr = 0.0001;
-       double limit = 0.5;
+       double limit = 0.1;
 
        train(df_train, &svm, params, lr, limit);
     }

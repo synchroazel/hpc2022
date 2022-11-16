@@ -4,7 +4,7 @@
 #include "svm.h"
 #include "Dataset.h"
 
-#define DEBUG_SUPPORT_VECTORS true
+#define DEBUG_SUPPORT_VECTORS false
 
 
 // ---------------------------------------
@@ -119,6 +119,7 @@ void train(const Dataset& training_data,
 
 
     int y[training_data.rows_number];  // array
+    memset(y, 0, training_data.rows_number * sizeof (int ));
     size_t i=0;
     //TODO: all checks
     int control = 0; // used for checks
@@ -128,10 +129,10 @@ void train(const Dataset& training_data,
 
         // look at y
         if (training_data.class_vector[i] == training_data.unique_classes[class_1]) { // if first class record
-            *(y + i) = -1;  // -1
+            y[i] = -1;  // -1
         } else { // if second class record
 
-            *(y + i) = 1;  // +1
+            y[i] = 1;  // +1
 
         }
     }
@@ -231,9 +232,11 @@ void train(const Dataset& training_data,
 
     // initialize, then realloc
     // NB: N are the rows of the new matrix
+    // need to check for memory leaks, we will try another approach in the meanwhile
     svm->arr_xs = (double *) calloc(N * training_data.predictors_column_number, sizeof (double )); // matrix
     svm->arr_ys = (int *) calloc(N, sizeof (int ));
     svm->arr_alpha_s = (double *) calloc(N, sizeof (double ));
+
 
     svm->arr_xs_row_size = 0;
     svm->arr_xs_column_size = training_data.predictors_column_number;
@@ -244,40 +247,67 @@ void train(const Dataset& training_data,
     svm->arr_ys_in = (int *) calloc(N, sizeof (int ));
     svm->arr_alpha_s_in = (double *) calloc(N, sizeof (double ));
 
+
+
     svm->arr_xs_in_row_size = 0;
     svm->arr_xs_in_column_size = training_data.predictors_column_number;
     svm->arr_ys_in_size = 0;
     svm->arr_alpha_in_size = 0;
 
+    int sv =0, svi = 0;
     for (i = 0; i < N; i++) {
         if ((eps < alpha[i]) && (alpha[i] < hyper_parameters[0]/*cost*/ - eps)) {
             // support vectors outside the margin
             get_row(training_data,i, false, xi);
-            memcpy(svm->arr_xs + index(i, 0, training_data.predictors_column_number),xi,training_data.predictors_column_number * sizeof (double ));
+            memcpy(svm->arr_xs + index(sv, 0, training_data.predictors_column_number),xi,training_data.predictors_column_number * sizeof (double ));
             ++svm->arr_xs_row_size;
 
-            *(svm->arr_ys + i) = *(y + i);
+            *(svm->arr_ys + sv) = y[i];
             ++svm->arr_ys_size;
 
-            *(svm->arr_alpha_s + i) = alpha[i];
+            *(svm->arr_alpha_s + sv) = alpha[i];
             ++svm->arr_alpha_size;
+
+            ++sv;
 
         } else if (alpha[i] >= hyper_parameters[0]/*cost*/ - eps) {
             // support vectors inside the margin
             get_row(training_data,i, false, xi);
-            memcpy(svm->arr_xs_in + index(i, 0, training_data.predictors_column_number),xi,training_data.predictors_column_number * sizeof (double ));
+            memcpy(svm->arr_xs_in + index(svi, 0, training_data.predictors_column_number),xi,training_data.predictors_column_number * sizeof (double ));
             ++svm->arr_xs_in_row_size;
 
-            *(svm->arr_ys_in + i) = *(y + i);
+            *(svm->arr_ys_in + svi) = y[i];
             ++svm->arr_ys_in_size;
 
-            *(svm->arr_alpha_s_in + i) = alpha[i];
+            *(svm->arr_alpha_s_in + svi) = alpha[i];
             ++svm->arr_alpha_in_size;
 
+            ++svi;
         }
 
     }
+#if DEBUG_SUPPORT_VECTORS
+    std::cout << "Before realloc" << std::endl;
 
+    std::cout << "x" << std::endl;
+    print_matrix(svm->arr_xs, svm->arr_xs_row_size, svm->arr_xs_column_size);
+
+    std::cout << "y" << std::endl;
+    print_vector(svm->arr_ys, svm->arr_ys_size);
+
+    std::cout << "alpha" << std::endl;
+    print_vector(svm->arr_alpha_s, svm->arr_alpha_size);
+
+    std::cout << "x in" << std::endl;
+    print_matrix(svm->arr_xs_in, svm->arr_xs_in_row_size, svm->arr_xs_column_size);
+
+    std::cout << "y in" << std::endl;
+    print_vector(svm->arr_ys_in, svm->arr_ys_in_size);
+
+    std::cout << "alpha in" << std::endl;
+    print_vector(svm->arr_alpha_s_in, svm->arr_alpha_in_size);
+
+#endif
     // realloc to cut off extra 0s
     // TODO: check if realloc does bogus stuff
     svm->arr_xs = (double *) reallocarray(svm->arr_xs, svm->arr_xs_row_size * svm->arr_xs_column_size, sizeof (double ));
@@ -287,7 +317,7 @@ void train(const Dataset& training_data,
     svm->arr_xs_in = (double *) reallocarray(svm->arr_xs_in, svm->arr_xs_in_row_size * svm->arr_xs_in_column_size, sizeof (double ));
     svm->arr_ys_in = (int *) reallocarray(svm->arr_ys_in, svm->arr_ys_in_size, sizeof (int));
     svm->arr_alpha_s_in = (double *) reallocarray(svm->arr_alpha_s_in, svm->arr_alpha_in_size, sizeof (double ));
-
+//
     // Update the bias
     svm->b = 0.0;
     for (i = 0; i < svm->arr_ys_size; i++) {
@@ -466,12 +496,13 @@ void test(Dataset test_data,
     svm->accuracy_c1 = (double) svm->correct_c1 / (double) c1;
     svm->accuracy_c2 = (double) svm->correct_c2 / (double) c2;
 
-    class1_data = nullptr;
     free(class1_data);
-    class2_data= nullptr;
+    class1_data = nullptr;
     free(class2_data);
-    cur_row = nullptr;
+    class2_data= nullptr;
     free(cur_row);
+    cur_row = nullptr;
+
 }
 
 
