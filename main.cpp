@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
 
     int control;
 
-    enum relevant_metric {Accuracy = NUMBER_OF_HYPER_PARAMETERS + 1, AccuracyC1 = NUMBER_OF_HYPER_PARAMETERS +2, AccuracyC3 = NUMBER_OF_HYPER_PARAMETERS +3};
+    enum relevant_metric {Accuracy = NUMBER_OF_HYPER_PARAMETERS + 1, AccuracyC1 = NUMBER_OF_HYPER_PARAMETERS +2, AccuracyC3 = NUMBER_OF_HYPER_PARAMETERS +3}metric;
 
 
 #if CLI_ARGS
@@ -82,14 +82,16 @@ int main(int argc, char *argv[]) {
         cout << "Compression level was not set.\n";
     }
 #else
-    std::string filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
-    // std::string filepath = "../data/iris_test.csv";
-    size_t rows = 70, columns = 5, target_column = 5;
-    double train_percentage = 0.8;
+    std::string filepath_training = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
+    std::string filepath_validation = "../data/iris_validation.csv";
+    size_t rows_t = 70, rows_v=30, columns = 5, target_column = 5;
 
     if(process_rank == MASTER_PROCESS){
-        std::cout << "Dataset filepath: " << filepath << std::endl;
-        std::cout << "The dataset has " << rows << " rows and " << columns << " columns." << std::endl;
+        std::cout << "Training Dataset filepath: " << filepath_training << std::endl;
+        std::cout << "The dataset has " << rows_t << " rows and " << columns << " columns." << std::endl;
+
+        std::cout << "Validation Dataset filepath: " << filepath_training << std::endl;
+        std::cout << "The dataset has " << rows_v << " rows and " << columns << " columns." << std::endl;
     }
 
 
@@ -99,7 +101,7 @@ int main(int argc, char *argv[]) {
     double coef0_array[] = {0,0.5,1,2.5,5,10};
     double degree_array[] = {1, 2, 3,4,5,10, static_cast<double>(columns-1)};
 
-    bool train_flag;
+    bool train_flag = true;
 #endif
 
 
@@ -135,13 +137,12 @@ int main(int argc, char *argv[]) {
 
 
 
-    Dataset df = read_dataset(filepath, rows, columns, target_column);
+    Dataset df_train = read_dataset(filepath_training, rows_t, columns, target_column);
+    Dataset df_validation = read_dataset(filepath_validation, rows_v, columns, target_column);
 
     if(train_flag){
         // TODO: refactor?
         // code for training
-
-        int train_break = (int) ceil((double)(rows) * train_percentage );
 
         size_t linear_rows = cost_array_size;
         size_t radial_rows = cost_array_size * gamma_array_size;
@@ -160,20 +161,31 @@ int main(int argc, char *argv[]) {
         }
 
         double final_tuning_table[tuning_table_rows * tuning_table_columns]; // matrix
+        memset(final_tuning_table, 0, tuning_table_rows * tuning_table_columns);
+        double local_tuning_table[tuning_table_rows * tuning_table_columns]; // matrix
+        memset(local_tuning_table, 0, tuning_table_rows * tuning_table_columns);
+
+        char kernel_type_final_table[tuning_table_rows];
+        memset(kernel_type_final_table, 'l', tuning_table_rows);
+        memset(kernel_type_final_table + linear_rows, 'r', tuning_table_rows);
+        memset(kernel_type_final_table + linear_rows + radial_rows, 's', tuning_table_rows);
+        memset(kernel_type_final_table + linear_rows + radial_rows + sigmoid_rows, 'p', tuning_table_rows);
 
         // TODO: decide condition
-        if(world_size < 4){
+        if(world_size < 100){
             // one after the other
 
             //linear
             if(process_rank == MASTER_PROCESS){
                 std::cout << "Starting linear tuning" << std::endl;
             }
+
+
 #if PERFORMANCE_CHECK
             MPI_Barrier(MPI_COMM_WORLD);
 #endif
-            tune_linear(&df, train_break, cost_array, cost_array_size, final_tuning_table, 0, tuning_table_columns, MASTER_PROCESS, world_size);
-
+            //tune_linear(&df_train, &df_validation, cost_array, cost_array_size, local_tuning_table, 0, tuning_table_columns, MASTER_PROCESS, world_size);
+            std::cout << "Process " << process_rank << " has finished linear tuning" << std::endl;
             //radial
 #if PERFORMANCE_CHECK
             MPI_Barrier(MPI_COMM_WORLD);
@@ -181,8 +193,8 @@ int main(int argc, char *argv[]) {
             if(process_rank == MASTER_PROCESS){
                 std::cout << "Starting radial tuning" << std::endl;
             }
-            tune_radial(&df, train_break, cost_array, cost_array_size, gamma_array, gamma_array_size,final_tuning_table, linear_rows * tuning_table_columns, tuning_table_columns, MASTER_PROCESS, world_size);
-
+            tune_radial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,local_tuning_table, linear_rows * tuning_table_columns, tuning_table_columns, MASTER_PROCESS, world_size);
+            std::cout << "Process " << process_rank << " has finished linear tuning" << std::endl;
             //sigmoid
 #if PERFORMANCE_CHECK
             MPI_Barrier(MPI_COMM_WORLD);
@@ -190,8 +202,8 @@ int main(int argc, char *argv[]) {
             if(process_rank == MASTER_PROCESS){
                 std::cout << "Starting sigmoid tuning" << std::endl;
             }
-            tune_sigmoid(&df, train_break, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size, final_tuning_table, linear_rows * tuning_table_columns + radial_rows * tuning_table_columns, tuning_table_columns, MASTER_PROCESS, world_size);
-
+            // tune_sigmoid(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size, local_tuning_table, linear_rows * tuning_table_columns + radial_rows * tuning_table_columns, tuning_table_columns, MASTER_PROCESS, world_size);
+            std::cout << "Process " << process_rank << " has finished linear tuning" << std::endl;
             //polynomial
 #if PERFORMANCE_CHECK
             MPI_Barrier(MPI_COMM_WORLD);
@@ -199,13 +211,47 @@ int main(int argc, char *argv[]) {
             if(process_rank == MASTER_PROCESS){
                 std::cout << "Starting polynomial tuning" << std::endl;
             }
-            tune_polynomial(&df, train_break, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size,degree_array, degree_array_size, final_tuning_table, linear_rows * tuning_table_columns + radial_rows * tuning_table_columns +sigmoid_rows * tuning_table_columns , tuning_table_columns, MASTER_PROCESS, world_size);
-
-
+            // tune_polynomial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size,degree_array, degree_array_size, local_tuning_table, linear_rows * tuning_table_columns + radial_rows * tuning_table_columns +sigmoid_rows * tuning_table_columns , tuning_table_columns, MASTER_PROCESS, world_size);
+            std::cout << "Process " << process_rank << " has finished linear tuning" << std::endl;
+#if PERFORMANCE_CHECK
+            MPI_Barrier(MPI_COMM_WORLD);
+#endif
+            MPI_Reduce(local_tuning_table, final_tuning_table, (int) (tuning_table_rows*tuning_table_columns), MPI_DOUBLE, MPI_SUM, MASTER_PROCESS, MPI_COMM_WORLD);
         } else {
             // together, will require a gather
         }
+        if(process_rank == MASTER_PROCESS) {
+            double accuracies[tuning_table_rows];
+            get_column(final_tuning_table, NUMBER_OF_HYPER_PARAMETERS,tuning_table_columns,tuning_table_rows, accuracies);
+            auto * m = std::max_element(accuracies, accuracies+tuning_table_rows);
+            int row_index = (int) (m - accuracies);
+            double max_accuracy = *m;
+            double best_row[tuning_table_columns];
+            get_row(final_tuning_table, row_index, tuning_table_columns,best_row);
 
+            std::cout << "Best combination:\n\tKernel Cost Gamma Coef0 Degree" << std::endl;
+            switch (kernel_type_final_table[row_index]) {
+                case 'l':{
+                    std::cout << "\tLinear ";
+                    break;
+                }
+                case 'r':{
+                    std::cout << "\tRadial ";
+                    break;
+                }
+                case 's':{
+                    std::cout << "\tSigmoid ";
+                    break;
+                }
+                case 'p':{
+                    std::cout << "\tPolynomial ";
+                    break;
+                }
+
+            }
+            print_vector(best_row, tuning_table_columns, false);
+            // todo: save data somewhere
+        }
 
 
     } else {

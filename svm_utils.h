@@ -471,17 +471,20 @@ void test(Dataset test_data,
     }
 
     size_t i;
+    int result=0;
 
     svm->correct_c1 = 0;
     for (i = 0; i < c1; i++) {
-        if (g(svm, class1_data + index(i, 0, test_data.predictors_column_number)) == 1) {
+        result = (int)g(svm, class1_data + index(i, 0, test_data.predictors_column_number));
+        if (result == 1) {
             ++svm->correct_c1;
         }
     }
 
     svm->correct_c2 = 0;
     for (i = 0; i < c1; i++) {
-        if (g(svm, class2_data + index(i, 0, test_data.predictors_column_number)) == -1) {
+        result = (int)g(svm, class2_data + index(i, 0, test_data.predictors_column_number));
+        if (result == -1) {
             ++svm->correct_c2;
         }
     }

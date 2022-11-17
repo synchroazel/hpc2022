@@ -9,6 +9,10 @@
 #include "Dataset.h"
 
 
+#define DEFAULT_LEARNING_RATE 0.001
+#define DEFAULT_LIMIT 0.1
+#define DEFAULT_EPS 1e-6
+
 // -------------------
 // namespace{kernel}
 // -------------------
@@ -111,12 +115,12 @@ int save_svm(const Kernel_SVM* svm, const std::string& path) {
     fwrite(&svm->arr_alpha_in_size, sizeof(size_t), 1, file_to_write);
 
     // writing vectors
-    fwrite(&svm->arr_xs, sizeof(size_t) * svm->arr_xs_row_size * svm->arr_xs_column_size, 1, file_to_write);
-    fwrite(&svm->arr_ys, sizeof(size_t)* svm->arr_xs_row_size, 1, file_to_write);
-    fwrite(&svm->arr_alpha_s, sizeof(size_t)* svm->arr_alpha_size, 1, file_to_write);
-    fwrite(&svm->arr_xs_in, sizeof(size_t)* svm->arr_xs_in_row_size * svm->arr_xs_in_column_size, 1, file_to_write);
-    fwrite(&svm->arr_ys_in, sizeof(size_t)* svm->arr_xs_in_row_size, 1, file_to_write);
-    fwrite(&svm->arr_alpha_s_in, sizeof(size_t)* svm->arr_alpha_in_size, 1, file_to_write);
+    fwrite(&svm->arr_xs, sizeof(double) * svm->arr_xs_row_size * svm->arr_xs_column_size, 1, file_to_write);
+    fwrite(&svm->arr_ys, sizeof(int)* svm->arr_xs_row_size, 1, file_to_write);
+    fwrite(&svm->arr_alpha_s, sizeof(double )* svm->arr_alpha_size, 1, file_to_write);
+    fwrite(&svm->arr_xs_in, sizeof(double )* svm->arr_xs_in_row_size * svm->arr_xs_in_column_size, 1, file_to_write);
+    fwrite(&svm->arr_ys_in, sizeof(int )* svm->arr_xs_in_row_size, 1, file_to_write);
+    fwrite(&svm->arr_alpha_s_in, sizeof(double )* svm->arr_alpha_in_size, 1, file_to_write);
 
     // b
     fwrite(&svm->b, sizeof(double), 1, file_to_write);
@@ -158,12 +162,12 @@ int read_svm(Kernel_SVM* svm, const std::string& path) {
     fread(&svm->arr_xs_in_column_size, sizeof(size_t), 1, file_to_read);
     fread(&svm->arr_alpha_in_size, sizeof(size_t), 1, file_to_read);
 
-    fread(&svm->arr_xs, sizeof(size_t) * svm->arr_xs_row_size * svm->arr_xs_column_size, 1, file_to_read);
-    fread(&svm->arr_ys, sizeof(size_t)* svm->arr_xs_row_size, 1, file_to_read);
-    fread(&svm->arr_alpha_s, sizeof(size_t)* svm->arr_alpha_size, 1, file_to_read);
-    fread(&svm->arr_xs_in, sizeof(size_t)* svm->arr_xs_in_row_size * svm->arr_xs_in_column_size, 1, file_to_read);
-    fread(&svm->arr_ys_in, sizeof(size_t)* svm->arr_xs_in_row_size, 1, file_to_read);
-    fread(&svm->arr_alpha_s_in, sizeof(size_t)* svm->arr_alpha_in_size, 1, file_to_read);
+    fread(&svm->arr_xs, sizeof(double) * svm->arr_xs_row_size * svm->arr_xs_column_size, 1, file_to_read);
+    fread(&svm->arr_ys, sizeof(int)* svm->arr_xs_row_size, 1, file_to_read);
+    fread(&svm->arr_alpha_s, sizeof(double)* svm->arr_alpha_size, 1, file_to_read);
+    fread(&svm->arr_xs_in, sizeof(double )* svm->arr_xs_in_row_size * svm->arr_xs_in_column_size, 1, file_to_read);
+    fread(&svm->arr_ys_in, sizeof(int)* svm->arr_xs_in_row_size, 1, file_to_read);
+    fread(&svm->arr_alpha_s_in, sizeof(double )* svm->arr_alpha_in_size, 1, file_to_read);
 
     // b
     fread(&svm->b, sizeof(double), 1, file_to_read);
