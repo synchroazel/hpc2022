@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
     // TODO: change to new logic
     if (process_rank == MASTER_PROCESS) {
 
-       char ker_type = 'l';
+       char ker_type = 's';
 
        Kernel_SVM svm;
        set_kernel_function(&svm, ker_type);

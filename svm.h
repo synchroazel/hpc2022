@@ -25,11 +25,6 @@ namespace kernel {
 
 // define types for struct functions
 typedef double (*KernelFunc)(double*, double*, size_t, double params[4]);
-typedef void (*TrainFunc)(const Dataset&, double[4], double, double);
-typedef void (*TestFunc)(const Dataset&);
-typedef void (*HelperFunc)(double);
-
-
 
 
 
@@ -45,11 +40,9 @@ typedef struct Kernel_SVM {
     // stored for serialization
     size_t arr_xs_row_size{};
     size_t arr_xs_column_size{};
-    size_t arr_ys_size{};
     size_t arr_alpha_size{};
     size_t arr_xs_in_row_size{};
     size_t arr_xs_in_column_size{};
-    size_t arr_ys_in_size{};
     size_t arr_alpha_in_size{};
 
     double *arr_xs{};  // matrix
@@ -112,19 +105,17 @@ int save_svm(const Kernel_SVM* svm, const std::string& path) {
     // write sizes
     fwrite(&svm->arr_xs_row_size, sizeof(size_t), 1, file_to_write);
     fwrite(&svm->arr_xs_column_size, sizeof(size_t), 1, file_to_write);
-    fwrite(&svm->arr_ys_size, sizeof(size_t), 1, file_to_write);
     fwrite(&svm->arr_alpha_size, sizeof(size_t), 1, file_to_write);
     fwrite(&svm->arr_xs_in_row_size, sizeof(size_t), 1, file_to_write);
     fwrite(&svm->arr_xs_in_column_size, sizeof(size_t), 1, file_to_write);
-    fwrite(&svm->arr_ys_in_size, sizeof(size_t), 1, file_to_write);
     fwrite(&svm->arr_alpha_in_size, sizeof(size_t), 1, file_to_write);
 
     // writing vectors
     fwrite(&svm->arr_xs, sizeof(size_t) * svm->arr_xs_row_size * svm->arr_xs_column_size, 1, file_to_write);
-    fwrite(&svm->arr_ys, sizeof(size_t)* svm->arr_ys_size, 1, file_to_write);
+    fwrite(&svm->arr_ys, sizeof(size_t)* svm->arr_xs_row_size, 1, file_to_write);
     fwrite(&svm->arr_alpha_s, sizeof(size_t)* svm->arr_alpha_size, 1, file_to_write);
     fwrite(&svm->arr_xs_in, sizeof(size_t)* svm->arr_xs_in_row_size * svm->arr_xs_in_column_size, 1, file_to_write);
-    fwrite(&svm->arr_ys_in, sizeof(size_t)* svm->arr_ys_in_size, 1, file_to_write);
+    fwrite(&svm->arr_ys_in, sizeof(size_t)* svm->arr_xs_in_row_size, 1, file_to_write);
     fwrite(&svm->arr_alpha_s_in, sizeof(size_t)* svm->arr_alpha_in_size, 1, file_to_write);
 
     // b
@@ -162,18 +153,16 @@ int read_svm(Kernel_SVM* svm, const std::string& path) {
     // read sizes
     fread(&svm->arr_xs_row_size, sizeof(size_t), 1, file_to_read);
     fread(&svm->arr_xs_column_size, sizeof(size_t), 1, file_to_read);
-    fread(&svm->arr_ys_size, sizeof(size_t), 1, file_to_read);
     fread(&svm->arr_alpha_size, sizeof(size_t), 1, file_to_read);
     fread(&svm->arr_xs_in_row_size, sizeof(size_t), 1, file_to_read);
     fread(&svm->arr_xs_in_column_size, sizeof(size_t), 1, file_to_read);
-    fread(&svm->arr_ys_in_size, sizeof(size_t), 1, file_to_read);
     fread(&svm->arr_alpha_in_size, sizeof(size_t), 1, file_to_read);
 
     fread(&svm->arr_xs, sizeof(size_t) * svm->arr_xs_row_size * svm->arr_xs_column_size, 1, file_to_read);
-    fread(&svm->arr_ys, sizeof(size_t)* svm->arr_ys_size, 1, file_to_read);
+    fread(&svm->arr_ys, sizeof(size_t)* svm->arr_xs_row_size, 1, file_to_read);
     fread(&svm->arr_alpha_s, sizeof(size_t)* svm->arr_alpha_size, 1, file_to_read);
     fread(&svm->arr_xs_in, sizeof(size_t)* svm->arr_xs_in_row_size * svm->arr_xs_in_column_size, 1, file_to_read);
-    fread(&svm->arr_ys_in, sizeof(size_t)* svm->arr_ys_in_size, 1, file_to_read);
+    fread(&svm->arr_ys_in, sizeof(size_t)* svm->arr_xs_in_row_size, 1, file_to_read);
     fread(&svm->arr_alpha_s_in, sizeof(size_t)* svm->arr_alpha_in_size, 1, file_to_read);
 
     // b
