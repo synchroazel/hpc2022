@@ -42,7 +42,7 @@ void build_mpi_datatype(MPI_Datatype *MPI_Dataset, Dataset df) {
     MPI_Type_commit(MPI_Dataset);
 }
 
-Dataset read_dataset(const std::string& filepath, int rows, int columns, int target_column) {
+Dataset read_dataset(const std::string& filepath, size_t rows, size_t columns, size_t target_column) {
 
     /**
      * Read dataset from a file, given filepath, rows, columns and target column
@@ -62,12 +62,12 @@ Dataset read_dataset(const std::string& filepath, int rows, int columns, int tar
     MPI_Comm_rank(MPI_COMM_WORLD, &process_rank);
 
     // to build matrix
-    int cols = columns - 1; // because of the y column
-    int r = rows;
+    size_t cols = columns - 1; // because of the y column
+    size_t r = rows;
 
 
     // reading techniques
-    int rows_per_process, cols_per_process, processes_for_input_read = world_size;
+    size_t rows_per_process, cols_per_process, processes_for_input_read = world_size;
     if (world_size <= rows) {
         // just separate the rows
         rows_per_process = (int) std::ceil((double) rows /
