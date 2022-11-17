@@ -240,7 +240,6 @@ void train(const Dataset& training_data,
 
     svm->arr_xs_row_size = 0;
     svm->arr_xs_column_size = training_data.predictors_column_number;
-    svm->arr_ys_size = 0;
     svm->arr_alpha_size = 0;
 
     svm->arr_xs_in = (double *) calloc(N * training_data.predictors_column_number, sizeof (double )); // matrix
@@ -251,7 +250,6 @@ void train(const Dataset& training_data,
 
     svm->arr_xs_in_row_size = 0;
     svm->arr_xs_in_column_size = training_data.predictors_column_number;
-    svm->arr_ys_in_size = 0;
     svm->arr_alpha_in_size = 0;
 
     int sv =0, svi = 0;
@@ -263,7 +261,6 @@ void train(const Dataset& training_data,
             ++svm->arr_xs_row_size;
 
             *(svm->arr_ys + sv) = y[i];
-            ++svm->arr_ys_size;
 
             *(svm->arr_alpha_s + sv) = alpha[i];
             ++svm->arr_alpha_size;
@@ -277,7 +274,6 @@ void train(const Dataset& training_data,
             ++svm->arr_xs_in_row_size;
 
             *(svm->arr_ys_in + svi) = y[i];
-            ++svm->arr_ys_in_size;
 
             *(svm->arr_alpha_s_in + svi) = alpha[i];
             ++svm->arr_alpha_in_size;
@@ -311,24 +307,24 @@ void train(const Dataset& training_data,
     // realloc to cut off extra 0s
     // TODO: check if realloc does bogus stuff
     svm->arr_xs = (double *) reallocarray(svm->arr_xs, svm->arr_xs_row_size * svm->arr_xs_column_size, sizeof (double ));
-    svm->arr_ys = (int *) reallocarray(svm->arr_ys, svm->arr_ys_size, sizeof (int));
+    svm->arr_ys = (int *) reallocarray(svm->arr_ys, svm->arr_xs_row_size, sizeof (int));
     svm->arr_alpha_s = (double *) reallocarray(svm->arr_alpha_s, svm->arr_alpha_size, sizeof (double ));
 
     svm->arr_xs_in = (double *) reallocarray(svm->arr_xs_in, svm->arr_xs_in_row_size * svm->arr_xs_in_column_size, sizeof (double ));
-    svm->arr_ys_in = (int *) reallocarray(svm->arr_ys_in, svm->arr_ys_in_size, sizeof (int));
+    svm->arr_ys_in = (int *) reallocarray(svm->arr_ys_in, svm->arr_xs_in_row_size, sizeof (int));
     svm->arr_alpha_s_in = (double *) reallocarray(svm->arr_alpha_s_in, svm->arr_alpha_in_size, sizeof (double ));
 //
     // Update the bias
     svm->b = 0.0;
-    for (i = 0; i < svm->arr_ys_size; i++) {
+    for (i = 0; i < svm->arr_xs_row_size; i++) {
         svm->b += (double) svm->arr_ys[i];
-        for (j = 0; j < svm->arr_ys_size; j++) {
+        for (j = 0; j < svm->arr_xs_row_size; j++) {
             get_row(svm->arr_xs,i, false, xi);
             get_row(svm->arr_xs,j, false, xj);
             svm->b -=
                     svm->arr_alpha_s[j] * (double) svm->arr_ys[j] * svm->K(xj, xi, svm->arr_xs_column_size, svm->params);
         }
-        for (j = 0; j < svm->arr_ys_in_size; j++) {
+        for (j = 0; j < svm->arr_xs_in_row_size; j++) {
             get_row(svm->arr_xs_in,i, false, xi);
             get_row(svm->arr_xs_in,j, false, xj);
             svm->b -=
@@ -336,7 +332,7 @@ void train(const Dataset& training_data,
                     svm->K(xj, xi, svm->arr_xs_column_size, svm->params);
         }
     }
-    svm->b /= (double) (svm->arr_ys_size + svm->arr_ys_in_size);
+    svm->b /= (double) (svm->arr_xs_row_size + svm->arr_xs_in_row_size);
     log("bias = " + std::to_string(svm->b) + "\n");
     log("////////////////////////////////////////////////////////\n\n");
 
@@ -389,9 +385,9 @@ void train(const Dataset& training_data,
 #endif
 
     if(svm->verbose){
-        log("Ns (number of support vectors on margin) = " + std::to_string(svm->arr_ys_size) + "\n");
+        log("Ns (number of support vectors on margin) = " + std::to_string(svm->arr_xs_row_size) + "\n");
 
-        log("Ns_in (number of support vectors inside margin) = " + std::to_string(svm->arr_ys_in_size) + "\n");
+        log("Ns_in (number of support vectors inside margin) = " + std::to_string(svm->arr_xs_in_row_size) + "\n");
     }
 
 
