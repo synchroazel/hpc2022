@@ -177,9 +177,9 @@ Dataset read_dataset(const std::string& filepath, int rows, int columns, int tar
     df.number_of_unique_classes = get_number_of_unique_classes(df.class_vector, df.rows_number);
     df.unique_classes = (int *) calloc(df.number_of_unique_classes, sizeof(int));
     get_unique_classes(df.class_vector, df.rows_number, df.unique_classes);
-
+#if PERFORMANCE_CHECK
     MPI_Barrier(MPI_COMM_WORLD);
-
+#endif
 #if DEBUG_READ_DATASET
     if (process_rank == MASTER_PROCESS) print_dataset(df, true);
 #endif

@@ -404,7 +404,7 @@ void train(const Dataset& training_data,
         // If not exist, create directory to save the model params
         switch (svm->kernel_type) {
             case 'l':{
-                s = "../saved_svm/linear.dat";
+                s = "../saved_svm/linear_C" + std::to_string(hyper_parameters[0]) + ".dat";
                 break;
             }
             case 'r':{
@@ -423,7 +423,7 @@ void train(const Dataset& training_data,
                 break;
             }
             case 'p':{
-                s = "../saved_svm/sigmoid" + std::string (1, svm->kernel_type) +
+                s = "../saved_svm/polynomial" + std::string (1, svm->kernel_type) +
                     "_C" + std::to_string(hyper_parameters[0])+
                     "_G" + std::to_string(hyper_parameters[1])+
                     "_O" + std::to_string(hyper_parameters[2])+
