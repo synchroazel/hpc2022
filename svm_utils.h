@@ -6,7 +6,7 @@
 #include "omp.h"
 
 #define DEBUG_SUPPORT_VECTORS false
-
+#define MASTER_PROCESS 0
 
 // ---------------------------------------
 // namespace{kernel} -> function{linear}
@@ -114,10 +114,13 @@ void train(const Dataset& training_data,
                        const double lr,
                        const double limit,
            bool save_svm_flag = true,
+           std::string svm_save_dir_path = "",
            size_t class_1=0,
            const double eps = 0.0000001
                        ) {
 
+
+    // TODO: set process
 
     int y[training_data.rows_number];  // array
     memset(y, 0, training_data.rows_number * sizeof (int ));
@@ -404,40 +407,48 @@ void train(const Dataset& training_data,
     if(save_svm_flag){
         /** Write svm to file **/
         std::string s;
+        if(svm_save_dir_path.empty()){
+            s = "./";
+        } else {
+            s = svm_save_dir_path;
+        }
+
         // If not exist, create directory to save the model params
         switch (svm->kernel_type) {
             case 'l':{
-                s = "../saved_svm/linear_C" + std::to_string(hyper_parameters[0]) + ".dat";
+                s = s + "linear_C" + std::to_string(hyper_parameters[0]) + ".svm";
                 break;
             }
             case 'r':{
-                s = "../saved_svm/radial" + std::string (1, svm->kernel_type) +
+                s =  s + "radial" + std::string (1, svm->kernel_type) +
                     "_C" + std::to_string(hyper_parameters[0])+
                     "_G" + std::to_string(hyper_parameters[1])+
-                    ".dat";
+                    ".svm";
                 break;
             }
             case 's':{
-                s = "../saved_svm/sigmoid" + std::string (1, svm->kernel_type) +
+                s =  s + "sigmoid" + std::string (1, svm->kernel_type) +
                     "_C" + std::to_string(hyper_parameters[0])+
                     "_G" + std::to_string(hyper_parameters[1])+
                     "_O" + std::to_string(hyper_parameters[2])+
-                    ".dat";
+                    ".svm";
                 break;
             }
             case 'p':{
-                s = "../saved_svm/polynomial" + std::string (1, svm->kernel_type) +
+                s =  s + "polynomial" + std::string (1, svm->kernel_type) +
                     "_C" + std::to_string(hyper_parameters[0])+
                     "_G" + std::to_string(hyper_parameters[1])+
                     "_O" + std::to_string(hyper_parameters[2])+
                     "_D" + std::to_string(hyper_parameters[3])+
-                    ".dat";
+                    ".svm";
                 break;
             }
         }
 
 
         save_svm(svm, s);
+
+        std::cout << "\nSvm was saved as " << s << std::endl;
     }
 
 

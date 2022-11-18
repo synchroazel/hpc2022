@@ -8,7 +8,7 @@
 #ifndef HPC2022_TUNE_SVM_H
 #define HPC2022_TUNE_SVM_H
 
-#define DEBUG_TUNE true
+#define DEBUG_TUNE false
 
 void tune_linear(Dataset* df_train,
                  Dataset* df_validation,
