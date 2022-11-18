@@ -2,6 +2,11 @@
 mpi_*
 **/cmake-build-default/
 **/cmake-build-debug/
+**/cmake-build-release-o1/
+**/cmake-build-release-o2/
+**/cmake-build-release-o3/
+**/cmake-build-release-ofast/
+**/cmake-build-release-os/
 **/*.tsv
 **/*.csv
 **/*.bak*

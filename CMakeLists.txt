@@ -12,6 +12,3 @@ target_link_libraries(hpc2022 PUBLIC MPI::MPI_CXX)
 
 # for M1 Macs
 include_directories("/opt/homebrew/include")
-
-find_package(Boost 1.55 REQUIRED serialization)
-target_link_libraries(hpc2022 PRIVATE Boost::serialization)

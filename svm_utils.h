@@ -160,7 +160,9 @@ void train(const Dataset& training_data,
 
     // tmp rows
     double xi[training_data.predictors_column_number];
+    memset(alpha, 0, training_data.predictors_column_number * sizeof (double ));
     double xj[training_data.predictors_column_number];
+    memset(alpha, 0, training_data.predictors_column_number * sizeof (double ));
 
     // (3) Training
     if(svm->verbose){
