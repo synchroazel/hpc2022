@@ -3,6 +3,7 @@
 #include <cmath>
 #include "svm.h"
 #include "Dataset.h"
+#include "omp.h"
 
 #define DEBUG_SUPPORT_VECTORS false
 
@@ -186,6 +187,7 @@ void train(const Dataset& training_data,
 
             // Set item 2
             item2 = 0;
+
             for (j = 0; j < N; j++) {
                 item2 += alpha[j] * (double) y[i] * (double) y[j];
             }
@@ -333,8 +335,11 @@ void train(const Dataset& training_data,
         }
     }
     svm->b /= (double) (svm->arr_xs_row_size + svm->arr_xs_in_row_size);
-    log("bias = " + std::to_string(svm->b) + "\n");
-    log("////////////////////////////////////////////////////////\n\n");
+    if(svm->verbose){
+        log("bias = " + std::to_string(svm->b) + "\n");
+        log("////////////////////////////////////////////////////////\n\n");
+    }
+
 
 
 #if DEBUG_SUPPORT_VECTORS
@@ -496,11 +501,8 @@ void test(Dataset test_data,
     svm->accuracy_c2 = (double) svm->correct_c2 / (double) c2;
 
     free(class1_data);
-    class1_data = nullptr;
     free(class2_data);
-    class2_data= nullptr;
     free(cur_row);
-    cur_row = nullptr;
 
 }
 

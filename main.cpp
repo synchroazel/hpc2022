@@ -12,6 +12,7 @@
 #define DEBUG_TRAIN false
 #define DEBUG_TEST false
 #define CLI_ARGS false
+#define DEBUG_MPI_OPERATIONS false
 #define IMPLEMENTED_KERNELS 4
 #define NUMBER_OF_HYPER_PARAMETERS 4
 
@@ -46,7 +47,7 @@ int main(int argc, char *argv[]) {
 
     int control;
 
-    enum relevant_metric {Accuracy = NUMBER_OF_HYPER_PARAMETERS + 1, AccuracyC1 = NUMBER_OF_HYPER_PARAMETERS +2, AccuracyC3 = NUMBER_OF_HYPER_PARAMETERS +3}metric;
+    // enum relevant_metric {Accuracy = NUMBER_OF_HYPER_PARAMETERS + 1, AccuracyC1 = NUMBER_OF_HYPER_PARAMETERS +2, AccuracyC3 = NUMBER_OF_HYPER_PARAMETERS +3}metric;
 
 
 #if CLI_ARGS
@@ -90,7 +91,7 @@ int main(int argc, char *argv[]) {
         std::cout << "Training Dataset filepath: " << filepath_training << std::endl;
         std::cout << "The dataset has " << rows_t << " rows and " << columns << " columns." << std::endl;
 
-        std::cout << "Validation Dataset filepath: " << filepath_training << std::endl;
+        std::cout << "Validation Dataset filepath: " << filepath_validation << std::endl;
         std::cout << "The dataset has " << rows_v << " rows and " << columns << " columns." << std::endl;
     }
 
@@ -160,16 +161,33 @@ int main(int argc, char *argv[]) {
             std::cout << "For a total of " << tuning_table_rows << " combinations" << std::endl;
         }
 
-        double final_tuning_table[tuning_table_rows * tuning_table_columns]; // matrix
-        memset(final_tuning_table, 0, tuning_table_rows * tuning_table_columns);
-        double local_tuning_table[tuning_table_rows * tuning_table_columns]; // matrix
-        memset(local_tuning_table, 0, tuning_table_rows * tuning_table_columns);
+
+
+
+        auto* final_tuning_table=(double *) calloc(tuning_table_rows * tuning_table_columns, sizeof (double )); // matrix
+        // double final_tuning_table[tuning_table_rows * tuning_table_columns]; // matrix
+        // memset(final_tuning_table, 0, tuning_table_rows * tuning_table_columns);
+#if DEBUG_MPI_OPERATIONS
+        print_matrix(final_tuning_table, tuning_table_rows, tuning_table_columns, true);
+        std::cout << "\n\n\n\n\n\n\n\n\n\n" ;
+#endif
+        auto* local_tuning_table=(double *) calloc(tuning_table_rows * tuning_table_columns, sizeof (double )); // matrix
+        // double local_tuning_table[tuning_table_rows * tuning_table_columns]; // matrix
+        // memset(local_tuning_table, 0, tuning_table_rows * tuning_table_columns);
+
+#if DEBUG_MPI_OPERATIONS
+        print_matrix(local_tuning_table, tuning_table_rows, tuning_table_columns, true);
+#endif
+
+
 
         char kernel_type_final_table[tuning_table_rows];
-        memset(kernel_type_final_table, 'l', tuning_table_rows);
-        memset(kernel_type_final_table + linear_rows, 'r', tuning_table_rows);
-        memset(kernel_type_final_table + linear_rows + radial_rows, 's', tuning_table_rows);
-        memset(kernel_type_final_table + linear_rows + radial_rows + sigmoid_rows, 'p', tuning_table_rows);
+        memset(kernel_type_final_table, 'l', linear_rows);
+        memset(kernel_type_final_table + linear_rows, 'r', radial_rows);
+        memset(kernel_type_final_table + linear_rows + radial_rows, 's', sigmoid_rows);
+        memset(kernel_type_final_table + linear_rows + radial_rows + sigmoid_rows, 'p', polynomial_rows);
+
+        print_vector(kernel_type_final_table, tuning_table_rows);
 
         // TODO: decide condition
         if(world_size < 100){
@@ -184,7 +202,7 @@ int main(int argc, char *argv[]) {
 #if PERFORMANCE_CHECK
             MPI_Barrier(MPI_COMM_WORLD);
 #endif
-            //tune_linear(&df_train, &df_validation, cost_array, cost_array_size, local_tuning_table, 0, tuning_table_columns, MASTER_PROCESS, world_size);
+            tune_linear(&df_train, &df_validation, cost_array, cost_array_size, local_tuning_table, 0, tuning_table_columns, MASTER_PROCESS, world_size);
             std::cout << "Process " << process_rank << " has finished linear tuning" << std::endl;
             //radial
 #if PERFORMANCE_CHECK
@@ -193,8 +211,8 @@ int main(int argc, char *argv[]) {
             if(process_rank == MASTER_PROCESS){
                 std::cout << "Starting radial tuning" << std::endl;
             }
-            tune_radial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,local_tuning_table, linear_rows * tuning_table_columns, tuning_table_columns, MASTER_PROCESS, world_size);
-            std::cout << "Process " << process_rank << " has finished linear tuning" << std::endl;
+            //tune_radial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,local_tuning_table, linear_rows * tuning_table_columns, tuning_table_columns, MASTER_PROCESS, world_size);
+            std::cout << "Process " << process_rank << " has finished radial tuning" << std::endl;
             //sigmoid
 #if PERFORMANCE_CHECK
             MPI_Barrier(MPI_COMM_WORLD);
@@ -203,7 +221,7 @@ int main(int argc, char *argv[]) {
                 std::cout << "Starting sigmoid tuning" << std::endl;
             }
             // tune_sigmoid(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size, local_tuning_table, linear_rows * tuning_table_columns + radial_rows * tuning_table_columns, tuning_table_columns, MASTER_PROCESS, world_size);
-            std::cout << "Process " << process_rank << " has finished linear tuning" << std::endl;
+            std::cout << "Process " << process_rank << " has finished sigmoid tuning" << std::endl;
             //polynomial
 #if PERFORMANCE_CHECK
             MPI_Barrier(MPI_COMM_WORLD);
@@ -212,11 +230,15 @@ int main(int argc, char *argv[]) {
                 std::cout << "Starting polynomial tuning" << std::endl;
             }
             // tune_polynomial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size,degree_array, degree_array_size, local_tuning_table, linear_rows * tuning_table_columns + radial_rows * tuning_table_columns +sigmoid_rows * tuning_table_columns , tuning_table_columns, MASTER_PROCESS, world_size);
-            std::cout << "Process " << process_rank << " has finished linear tuning" << std::endl;
+            std::cout << "Process " << process_rank << " has finished polynomial tuning" << std::endl;
 #if PERFORMANCE_CHECK
             MPI_Barrier(MPI_COMM_WORLD);
 #endif
             MPI_Reduce(local_tuning_table, final_tuning_table, (int) (tuning_table_rows*tuning_table_columns), MPI_DOUBLE, MPI_SUM, MASTER_PROCESS, MPI_COMM_WORLD);
+            free(local_tuning_table);
+#if DEBUG_MPI_OPERATIONS
+            print_matrix(final_tuning_table, tuning_table_rows, tuning_table_columns);
+#endif
         } else {
             // together, will require a gather
         }
@@ -226,10 +248,12 @@ int main(int argc, char *argv[]) {
             auto * m = std::max_element(accuracies, accuracies+tuning_table_rows);
             int row_index = (int) (m - accuracies);
             double max_accuracy = *m;
+            std::cout << "Best Accuracy: " << max_accuracy << std::endl;
             double best_row[tuning_table_columns];
             get_row(final_tuning_table, row_index, tuning_table_columns,best_row);
 
-            std::cout << "Best combination:\n\tKernel Cost Gamma Coef0 Degree" << std::endl;
+
+            std::cout << "Best combination:\n\tKernel Cost Gamma Coef0 Degree Accuracy C1_Acc. C2_Acc." << std::endl;
             switch (kernel_type_final_table[row_index]) {
                 case 'l':{
                     std::cout << "\tLinear ";
@@ -253,7 +277,7 @@ int main(int argc, char *argv[]) {
             // todo: save data somewhere
         }
 
-
+        free(final_tuning_table);
     } else {
         // code for test
     }

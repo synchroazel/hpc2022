@@ -48,7 +48,7 @@ Dataset read_dataset(const std::string& filepath, size_t rows, size_t columns, s
      * Read dataset from a file, given filepath, rows, columns and target column
      */
 
-    int MPI_Error_control = 0;
+    int MPI_Error_control;
 
     char *file_separator = (char *) (",");
 
@@ -152,13 +152,13 @@ Dataset read_dataset(const std::string& filepath, size_t rows, size_t columns, s
 
     }
 
-    MPI_Error_control = MPI_Allreduce(local_x, final_x, r * cols, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Error_control = MPI_Allreduce(local_x, final_x, (int)(r * cols), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     if (MPI_Error_control != MPI_SUCCESS) {
         std::cout << "Error during x reduce" << std::endl;
         exit(1);
     }
 
-    MPI_Error_control = MPI_Allreduce(local_y, y, r, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Error_control = MPI_Allreduce(local_y, y, (int)(r), MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     if (MPI_Error_control != MPI_SUCCESS) {
         std::cout << "Error during y reduce" << std::endl;
         exit(1);

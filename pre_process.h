@@ -16,77 +16,7 @@
 #define DEBUG_READ_DATA false
 // NB: assumes pre_processed file
 
-Dataset read_dataset_serial(const std::string &file_path, int rows, int columns, int target_column, char *separator,
-                            const std::string &comma_separator) {
-/*expects a csv of double*/
-    // initialize
-    Dataset df;
 
-    double x[rows * columns];
-    int y[rows];
-    unsigned int i = 0, j; // column and row iterator
-    unsigned int number_of_classes;
-
-#if DEBUG_READ_DATA
-    print_matrix(x,rows,columns, true);
-    print_vector(y,rows, true);
-#endif
-
-    std::string line;
-    std::ifstream file(file_path);
-    if (file.is_open()) {
-
-        while (getline(file, line)) {
-            j = 0;
-
-            boost::char_separator<char> sep(separator);
-            boost::tokenizer<boost::char_separator<char> > tok(line, sep);
-            for (boost::tokenizer<boost::char_separator<char> >::iterator beg = tok.begin(); beg != tok.end(); ++beg) {
-
-                const std::string &value = *beg;
-                //std::regex pattern ("^[0-9]"); // everything that is not a number
-                //std::regex_replace(value, pattern,comma_separator); // will be converted into the separator
-
-                if (j + 1 != target_column) {
-                    modify_matrix_value(x, std::stod(value), i, j, columns); // to double NB: should fix
-#if DEBUG_READ_DATA
-                    std::cout << "New value: " << value << " at " << i << ", " << j << std::endl;
-                    print_matrix(x,rows,columns);
-#endif
-                } else {
-                    y[i] = std::stoi(value); // to int (will be a class)
-                }
-                j++;
-            }
-            i++;
-            if (i >= rows) { break; }
-        }
-        file.close();
-
-    } else {
-        std::cout << "Unable to open file";
-        exit(1);
-    }
-
-
-// assign
-    df.rows_number = rows;
-    df.predictors_column_number = columns - 1; // NB: columns are the columns of the csv
-    df.class_vector = y;
-    df.predictor_matrix = x;
-    df.number_of_unique_classes = get_number_of_unique_classes(df.class_vector, df.rows_number);
-    df.unique_classes = (int *) calloc(df.number_of_unique_classes, sizeof(int));
-    get_unique_classes(df.class_vector, rows, df.unique_classes);
-
-// output feedback
-#if DEBUG_READ_DATA
-    print_dataset(df);
-#endif
-
-    return df;
-}
-
-// TODO: fix
 void read_dataset_parallel(
         double *x, /*out*/
         int *y, /*out*/

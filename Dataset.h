@@ -12,7 +12,6 @@ the ith element in a Row (which is a T&)
 #include "iostream"
 #include "set"
 
-#define DEBUG_MATRIX true
 
 // struct
 typedef struct Dataset {
