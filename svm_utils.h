@@ -8,16 +8,18 @@
 #define DEBUG_SUPPORT_VECTORS false
 #define MASTER_PROCESS 0
 
-// ---------------------------------------
-// namespace{kernel} -> function{linear}
-// ---------------------------------------
-double kernel::linear(const double* x1,
-                      const double* x2,
+
+/**
+ * Linear kernel function
+ */
+
+double kernel::linear(const double *x1,
+                      const double *x2,
                       size_t size,
                       double params[4] = nullptr) { // cost, gamma, coef0, degree, in this case none
 
     size_t i;
-    double ans= 0.0;
+    double ans = 0.0;
 
     // u*v
     for (i = 0; i < size; i++) {
@@ -29,11 +31,12 @@ double kernel::linear(const double* x1,
 }
 
 
-// -------------------------------------------
-// namespace{kernel} -> function{polynomial}
-// -------------------------------------------
-double kernel::polynomial(const double* x1,
-                          const double* x2,
+/**
+ * Polynomial kernel function
+ */
+
+double kernel::polynomial(const double *x1,
+                          const double *x2,
                           size_t size,
                           double params[4]) { // cost, gamma, coef0, degree
 
@@ -54,13 +57,14 @@ double kernel::polynomial(const double* x1,
 }
 
 
-// ------------------------------------
-// namespace{kernel} -> function{radial}
-// ------------------------------------
-double kernel::radial(const double* x1,
-                   const double* x2,
-                   size_t size,
-                   const double params[4]) { // cost, gamma, coef0, degree
+/**
+ * Radial kernel function
+ */
+
+double kernel::radial(const double *x1,
+                      const double *x2,
+                      size_t size,
+                      const double params[4]) { // cost, gamma, coef0, degree
 
     size_t i;
     double ans = 0.0;
@@ -77,13 +81,15 @@ double kernel::radial(const double* x1,
 
 }
 
-// ------------------------------------
-// namespace{kernel} -> function{sigmoid}
-// ------------------------------------
-double kernel::sigmoid(const double* x1,
-                      const double* x2,
-                      size_t size,
-                      const double params[4]) { // cost, gamma, coef0, degree
+
+/**
+ * Sigmoid kernel function
+ */
+
+double kernel::sigmoid(const double *x1,
+                       const double *x2,
+                       size_t size,
+                       const double params[4]) { // cost, gamma, coef0, degree
 
     size_t i;
     double ans = 0.0;
@@ -102,32 +108,29 @@ double kernel::sigmoid(const double* x1,
 }
 
 
-
-// --------------------------------------
-// class{Kernel_SVM} -> function{train}
-// --------------------------------------
+/**
+ * Training function
+ */
 
 // training data must have only two classes
-void train(const Dataset& training_data,
-                       Kernel_SVM* svm,
-                       double hyper_parameters[4],
-                       const double lr,
-                       const double limit,
+void train(const Dataset &training_data,
+           Kernel_SVM *svm,
+           double hyper_parameters[4],
+           const double lr,
+           const double limit,
            bool save_svm_flag = true,
            std::string svm_save_dir_path = "",
-           size_t class_1=0,
+           size_t class_1 = 0,
            const double eps = 0.0000001
-                       ) {
-
+) {
 
     // TODO: set process
 
     int y[training_data.rows_number];  // array
-    memset(y, 0, training_data.rows_number * sizeof (int ));
-    size_t i=0;
+    memset(y, 0, training_data.rows_number * sizeof(int));
+    size_t i = 0;
     //TODO: all checks
     int control = 0; // used for checks
-
 
     for (; i < training_data.rows_number; i++) {
 
@@ -141,12 +144,10 @@ void train(const Dataset& training_data,
         }
     }
 
-
-
     size_t N;
     N = i; // number of rows
 
-    i=0; // i will be useful later
+    i = 0; // i will be useful later
     size_t j;
 
     bool judge;
@@ -155,20 +156,20 @@ void train(const Dataset& training_data,
     double beta;
     double error;
 
-    // (2) Set Lagrange Multiplier and Parameters
+    // set Lagrange Multiplier and Parameters
     double alpha[N];
-    memset(alpha, 0, N * sizeof (double ));
+    memset(alpha, 0, N * sizeof(double));
 
     beta = 1.0;
 
     // tmp rows
     double xi[training_data.predictors_column_number];
-    memset(alpha, 0, training_data.predictors_column_number * sizeof (double ));
+    memset(alpha, 0, training_data.predictors_column_number * sizeof(double));
     double xj[training_data.predictors_column_number];
-    memset(alpha, 0, training_data.predictors_column_number * sizeof (double ));
+    memset(alpha, 0, training_data.predictors_column_number * sizeof(double));
 
-    // (3) Training
-    if(svm->verbose){
+    // training
+    if (svm->verbose) {
         log("\n");
         log("/////////////////////// Training ///////////////////////\n");
     }
@@ -178,30 +179,31 @@ void train(const Dataset& training_data,
         judge = false;
         error = 0.0;
 
-        // (3.1) Update Alpha
+        // update Alpha
         for (i = 0; i < N; i++) {
 
-            // Compute the partial derivative with respect to alpha
+            // compute the partial derivative with respect to alpha
 
             item1 = 0;
             for (j = 0; j < N; j++) {
-                get_row(training_data,i, false, xi);
-                get_row(training_data,j, false, xj);
-                item1 += alpha[j] * (double) y[i] * (double) y[j] * svm->K(xi, xj, training_data.predictors_column_number, hyper_parameters);
+                get_row(training_data, i, false, xi);
+                get_row(training_data, j, false, xj);
+                item1 += alpha[j] * (double) y[i] * (double) y[j] *
+                         svm->K(xi, xj, training_data.predictors_column_number, hyper_parameters);
             }
 
-            // Set item 2
+            // set item 2
             item2 = 0;
 
             for (j = 0; j < N; j++) {
                 item2 += alpha[j] * (double) y[i] * (double) y[j];
             }
 
-            // Set such partial derivative to Delta
+            // set such partial derivative to Delta
 
             delta = 1.0 - item1 - beta * item2;
 
-            // Update
+            // update
             alpha[i] += lr * delta;
             if (alpha[i] < 0.0) {
                 alpha[i] = 0.0;
@@ -214,70 +216,66 @@ void train(const Dataset& training_data,
 
         }
 
-        // (3.2) Update bias Beta
+        // update bias Beta
         item3 = 0.0;
         for (i = 0; i < N; i++) {
             item3 += alpha[i] * (double) y[i];
         }
         beta += item3 * item3 / 2.0;
 
-        // (3.3) Output Residual Error
-        if(svm->verbose){
-            log("\rerror: " + std::to_string(error));
+        // output Residual Error
+        if (svm->verbose) {
+            log("\r error: " + std::to_string(error));
         }
 
     } while (judge);
 
-    if(svm->verbose){
+    if (svm->verbose) {
         log("\n");
         log("////////////////////////////////////////////////////////\n");
     }
 
-
-    // (4.1) Description for support vectors
-
-
     // initialize, then realloc
     // NB: N are the rows of the new matrix
     // need to check for memory leaks, we will try another approach in the meanwhile
-    svm->arr_xs = (double *) calloc(N * training_data.predictors_column_number, sizeof (double )); // matrix
-    svm->arr_ys = (int *) calloc(N, sizeof (int ));
-    svm->arr_alpha_s = (double *) calloc(N, sizeof (double ));
 
+    svm->arr_xs = (double *) calloc(N * training_data.predictors_column_number, sizeof(double)); // matrix
+    svm->arr_ys = (int *) calloc(N, sizeof(int));
+    svm->arr_alpha_s = (double *) calloc(N, sizeof(double));
 
     svm->arr_xs_row_size = 0;
     svm->arr_xs_column_size = training_data.predictors_column_number;
-    svm->arr_alpha_size = 0;
+    //svm->arr_alpha_size = 0;
 
-    svm->arr_xs_in = (double *) calloc(N * training_data.predictors_column_number, sizeof (double )); // matrix
-    svm->arr_ys_in = (int *) calloc(N, sizeof (int ));
-    svm->arr_alpha_s_in = (double *) calloc(N, sizeof (double ));
-
-
+    svm->arr_xs_in = (double *) calloc(N * training_data.predictors_column_number, sizeof(double)); // matrix
+    svm->arr_ys_in = (int *) calloc(N, sizeof(int));
+    svm->arr_alpha_s_in = (double *) calloc(N, sizeof(double));
 
     svm->arr_xs_in_row_size = 0;
-    svm->arr_xs_in_column_size = training_data.predictors_column_number;
+    //svm->arr_xs_in_column_size = training_data.predictors_column_number;
     svm->arr_alpha_in_size = 0;
 
-    int sv =0, svi = 0;
+    int sv = 0, svi = 0;
     for (i = 0; i < N; i++) {
         if ((eps < alpha[i]) && (alpha[i] < hyper_parameters[0]/*cost*/ - eps)) {
             // support vectors outside the margin
-            get_row(training_data,i, false, xi);
-            memcpy(svm->arr_xs + index(sv, 0, training_data.predictors_column_number),xi,training_data.predictors_column_number * sizeof (double ));
+            get_row(training_data, i, false, xi);
+            memcpy(svm->arr_xs + index(sv, 0, training_data.predictors_column_number), xi,
+                   training_data.predictors_column_number * sizeof(double));
             ++svm->arr_xs_row_size;
 
             *(svm->arr_ys + sv) = y[i];
 
             *(svm->arr_alpha_s + sv) = alpha[i];
-            ++svm->arr_alpha_size;
+            //++svm->arr_alpha_size;
 
             ++sv;
 
         } else if (alpha[i] >= hyper_parameters[0]/*cost*/ - eps) {
             // support vectors inside the margin
-            get_row(training_data,i, false, xi);
-            memcpy(svm->arr_xs_in + index(svi, 0, training_data.predictors_column_number),xi,training_data.predictors_column_number * sizeof (double ));
+            get_row(training_data, i, false, xi);
+            memcpy(svm->arr_xs_in + index(svi, 0, training_data.predictors_column_number), xi,
+                   training_data.predictors_column_number * sizeof(double));
             ++svm->arr_xs_in_row_size;
 
             *(svm->arr_ys_in + svi) = y[i];
@@ -287,9 +285,10 @@ void train(const Dataset& training_data,
 
             ++svi;
         }
-
     }
+
 #if DEBUG_SUPPORT_VECTORS
+
     std::cout << "Before realloc" << std::endl;
 
     std::cout << "x" << std::endl;
@@ -313,39 +312,44 @@ void train(const Dataset& training_data,
 #endif
     // realloc to cut off extra 0s
     // TODO: check if realloc does bogus stuff
-    svm->arr_xs = (double *) reallocarray(svm->arr_xs, svm->arr_xs_row_size * svm->arr_xs_column_size, sizeof (double ));
-    svm->arr_ys = (int *) reallocarray(svm->arr_ys, svm->arr_xs_row_size, sizeof (int));
-    svm->arr_alpha_s = (double *) reallocarray(svm->arr_alpha_s, svm->arr_alpha_size, sizeof (double ));
 
-    svm->arr_xs_in = (double *) reallocarray(svm->arr_xs_in, svm->arr_xs_in_row_size * svm->arr_xs_in_column_size, sizeof (double ));
-    svm->arr_ys_in = (int *) reallocarray(svm->arr_ys_in, svm->arr_xs_in_row_size, sizeof (int));
-    svm->arr_alpha_s_in = (double *) reallocarray(svm->arr_alpha_s_in, svm->arr_alpha_in_size, sizeof (double ));
+//    svm->arr_xs = (double *) reallocarray(svm->arr_xs, svm->arr_xs_row_size * svm->arr_xs_column_size, sizeof (double ));
+//    svm->arr_ys = (int *) reallocarray(svm->arr_ys, svm->arr_xs_row_size, sizeof (int));
+//    svm->arr_alpha_s = (double *) reallocarray(svm->arr_alpha_s, svm->arr_alpha_size, sizeof (double ));
 //
+//    svm->arr_xs_in = (double *) reallocarray(svm->arr_xs_in, svm->arr_xs_in_row_size * svm->arr_xs_in_column_size, sizeof (double ));
+//    svm->arr_ys_in = (int *) reallocarray(svm->arr_ys_in, svm->arr_xs_in_row_size, sizeof (int));
+//    svm->arr_alpha_s_in = (double *) reallocarray(svm->arr_alpha_s_in, svm->arr_alpha_in_size, sizeof (double ));
+
+    svm->arr_xs = (double *) realloc(svm->arr_xs, svm->arr_xs_row_size * svm->arr_xs_column_size * sizeof(double));
+    svm->arr_ys = (int *) realloc(svm->arr_ys, svm->arr_xs_row_size * sizeof(int));
+    svm->arr_ys_in = (int *) realloc(svm->arr_ys_in, svm->arr_xs_in_row_size * sizeof(int));
+    svm->arr_alpha_s_in = (double *) realloc(svm->arr_alpha_s_in, svm->arr_alpha_in_size * sizeof(double));
+
     // Update the bias
     svm->b = 0.0;
     for (i = 0; i < svm->arr_xs_row_size; i++) {
         svm->b += (double) svm->arr_ys[i];
         for (j = 0; j < svm->arr_xs_row_size; j++) {
-            get_row(svm->arr_xs,i, false, xi);
-            get_row(svm->arr_xs,j, false, xj);
+            get_row(svm->arr_xs, i, false, xi);
+            get_row(svm->arr_xs, j, false, xj);
             svm->b -=
-                    svm->arr_alpha_s[j] * (double) svm->arr_ys[j] * svm->K(xj, xi, svm->arr_xs_column_size, svm->params);
+                    svm->arr_alpha_s[j] * (double) svm->arr_ys[j] *
+                    svm->K(xj, xi, svm->arr_xs_column_size, svm->params);
         }
         for (j = 0; j < svm->arr_xs_in_row_size; j++) {
-            get_row(svm->arr_xs_in,i, false, xi);
-            get_row(svm->arr_xs_in,j, false, xj);
+            get_row(svm->arr_xs_in, i, false, xi);
+            get_row(svm->arr_xs_in, j, false, xj);
             svm->b -=
                     svm->arr_alpha_s_in[j] * (double) svm->arr_ys_in[j] *
                     svm->K(xj, xi, svm->arr_xs_column_size, svm->params);
         }
     }
     svm->b /= (double) (svm->arr_xs_row_size + svm->arr_xs_in_row_size);
-    if(svm->verbose){
+    if (svm->verbose) {
         log("bias = " + std::to_string(svm->b) + "\n");
         log("////////////////////////////////////////////////////////\n\n");
     }
-
-
 
 #if DEBUG_SUPPORT_VECTORS
 
@@ -394,20 +398,16 @@ void train(const Dataset& training_data,
 
 #endif
 
-    if(svm->verbose){
+    if (svm->verbose) {
         log("Ns (number of support vectors on margin) = " + std::to_string(svm->arr_xs_row_size) + "\n");
 
         log("Ns_in (number of support vectors inside margin) = " + std::to_string(svm->arr_xs_in_row_size) + "\n");
     }
 
-
-
-
-
-    if(save_svm_flag){
+    if (save_svm_flag) {
         /** Write svm to file **/
         std::string s;
-        if(svm_save_dir_path.empty()){
+        if (svm_save_dir_path.empty()) {
             s = "./";
         } else {
             s = svm_save_dir_path;
@@ -415,98 +415,96 @@ void train(const Dataset& training_data,
 
         // If not exist, create directory to save the model params
         switch (svm->kernel_type) {
-            case 'l':{
+            case 'l': {
                 s = s + "linear_C" + std::to_string(hyper_parameters[0]) + ".svm";
                 break;
             }
-            case 'r':{
-                s =  s + "radial" + std::string (1, svm->kernel_type) +
-                    "_C" + std::to_string(hyper_parameters[0])+
-                    "_G" + std::to_string(hyper_parameters[1])+
+            case 'r': {
+                s = s + "radial" + std::string(1, svm->kernel_type) +
+                    "_C" + std::to_string(hyper_parameters[0]) +
+                    "_G" + std::to_string(hyper_parameters[1]) +
                     ".svm";
                 break;
             }
-            case 's':{
-                s =  s + "sigmoid" + std::string (1, svm->kernel_type) +
-                    "_C" + std::to_string(hyper_parameters[0])+
-                    "_G" + std::to_string(hyper_parameters[1])+
-                    "_O" + std::to_string(hyper_parameters[2])+
+            case 's': {
+                s = s + "sigmoid" + std::string(1, svm->kernel_type) +
+                    "_C" + std::to_string(hyper_parameters[0]) +
+                    "_G" + std::to_string(hyper_parameters[1]) +
+                    "_O" + std::to_string(hyper_parameters[2]) +
                     ".svm";
                 break;
             }
-            case 'p':{
-                s =  s + "polynomial" + std::string (1, svm->kernel_type) +
-                    "_C" + std::to_string(hyper_parameters[0])+
-                    "_G" + std::to_string(hyper_parameters[1])+
-                    "_O" + std::to_string(hyper_parameters[2])+
-                    "_D" + std::to_string(hyper_parameters[3])+
+            case 'p': {
+                s = s + "polynomial" + std::string(1, svm->kernel_type) +
+                    "_C" + std::to_string(hyper_parameters[0]) +
+                    "_G" + std::to_string(hyper_parameters[1]) +
+                    "_O" + std::to_string(hyper_parameters[2]) +
+                    "_D" + std::to_string(hyper_parameters[3]) +
                     ".svm";
                 break;
             }
         }
-
 
         save_svm(svm, s);
 
         std::cout << "\nSvm was saved as " << s << std::endl;
     }
 
-
-
     // TODO: capire di cosa fare il free
-
 
 }
 
 
-// -------------------------------------
-// class{Kernel_SVM} -> function{test}
-// -------------------------------------
+/**
+ * Testing function
+ */
+
 void test(Dataset test_data,
-          Kernel_SVM* svm,
-          size_t class_1=0) {
+          Kernel_SVM *svm,
+          size_t class_1 = 0) {
 
 
     // split all training data into class1 and class2 data
 
-    auto *class1_data = (double *) calloc(test_data.rows_number * test_data.predictors_column_number, sizeof (double ));
-    auto *class2_data = (double *) calloc(test_data.rows_number * test_data.predictors_column_number, sizeof (double ));
+    auto *class1_data = (double *) calloc(test_data.rows_number * test_data.predictors_column_number, sizeof(double));
+    auto *class2_data = (double *) calloc(test_data.rows_number * test_data.predictors_column_number, sizeof(double));
 
     auto *cur_row = (double *) calloc(test_data.predictors_column_number, sizeof(double));
-    size_t c1=0, c2=0;
+    size_t c1 = 0, c2 = 0;
 
     for (size_t i = 0; i < test_data.rows_number; i++) {
 
         get_row(test_data, i, false, cur_row);
 
         if (test_data.class_vector[i] == test_data.unique_classes[class_1]) {
-            memcpy(class1_data + (c1 * test_data.predictors_column_number),  cur_row,test_data.predictors_column_number * sizeof (double ));
+            memcpy(class1_data + (c1 * test_data.predictors_column_number), cur_row,
+                   test_data.predictors_column_number * sizeof(double));
             ++c1;
-        } else{
-            memcpy(class2_data + (c2 * test_data.predictors_column_number),  cur_row,test_data.predictors_column_number * sizeof (double ));
+        } else {
+            memcpy(class2_data + (c2 * test_data.predictors_column_number), cur_row,
+                   test_data.predictors_column_number * sizeof(double));
             ++c2;
         }
     }
 
     size_t i;
-    int result=0;
+    int result = 0;
 
     svm->correct_c1 = 0;
     for (i = 0; i < c1; i++) {
-        result = (int)g(svm, class1_data + index(i, 0, test_data.predictors_column_number));
-        if (result == 1) {
+        result = (int) g(svm, class1_data + index(i, 0, test_data.predictors_column_number));
+        if (result == -1) {
             ++svm->correct_c1;
         }
     }
 
     svm->correct_c2 = 0;
     for (i = 0; i < c1; i++) {
-        result = (int)g(svm, class2_data + index(i, 0, test_data.predictors_column_number));
-        if (result == -1) {
+        result = (int) g(svm, class2_data + index(i, 0, test_data.predictors_column_number));
+        if (result == 1) {
             ++svm->correct_c2;
         }
     }
-
 
     svm->accuracy =
             (double) (svm->correct_c1 + svm->correct_c2) / (double) (c1 + c2);

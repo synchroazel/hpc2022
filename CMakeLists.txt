@@ -10,5 +10,7 @@ add_executable(hpc2022 main.cpp read_dataset.h pre_process.h Dataset.h svm.h tun
 # Add libraries for code completion and compiling
 target_link_libraries(hpc2022 PUBLIC MPI::MPI_CXX)
 
-# for M1 Macs
+# for homebrew-installed libraries
 include_directories("/opt/homebrew/include")
+include_directories("/opt/homebrew/Cellar/libomp/15.0.4/include")
+
