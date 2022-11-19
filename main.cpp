@@ -111,7 +111,6 @@ int main(int argc, char *argv[]) {
 
     bool verbose = true;
 
-    std::string save_dir_path = "";
     std::string save_dir_path;
 
     double Cost = 5;
