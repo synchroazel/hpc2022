@@ -9,8 +9,6 @@
 
 
 /* Macro to switch modes */
-#define DEBUG_TRAIN false
-#define DEBUG_TEST false
 #define CLI_ARGS false
 #define DEBUG_MPI_OPERATIONS false
 #define IMPLEMENTED_KERNELS 4
@@ -114,6 +112,7 @@ int main(int argc, char *argv[]) {
     bool verbose = true;
 
     std::string save_dir_path = "";
+    std::string save_dir_path;
 
     double Cost = 5;
     double gamma = 0.1;
@@ -179,7 +178,8 @@ int main(int argc, char *argv[]) {
             // TODO: change to parallel logic
 
             Kernel_SVM svm;
-            svm.verbose = true;
+
+            svm.verbose= verbose;
             set_kernel_function(&svm, ker_type);
 
             double params[4] = {Cost, gamma, coef0, degree};
@@ -339,10 +339,12 @@ int main(int argc, char *argv[]) {
                 std::cout << "For a total of " << tuning_table_rows << " combinations" << std::endl;
             }
 
-            auto *final_tuning_table = (double *) calloc(tuning_table_rows * tuning_table_columns,
-                                                         sizeof(double)); // matrix
-            // double final_tuning_table[tuning_table_rows * tuning_table_columns]; // matrix
-            // memset(final_tuning_table, 0, tuning_table_rows * tuning_table_columns);
+
+
+
+
+            auto* final_tuning_table=(double *) calloc(tuning_table_rows * tuning_table_columns, sizeof (double )); // matrix
+
 
 #if DEBUG_MPI_OPERATIONS
 
@@ -351,16 +353,16 @@ int main(int argc, char *argv[]) {
 
 #endif
 
-            auto *local_tuning_table = (double *) calloc(tuning_table_rows * tuning_table_columns,
-                                                         sizeof(double)); // matrix
-            // double local_tuning_table[tuning_table_rows * tuning_table_columns]; // matrix
-            // memset(local_tuning_table, 0, tuning_table_rows * tuning_table_columns);
+            auto* local_tuning_table=(double *) calloc(tuning_table_rows * tuning_table_columns, sizeof (double )); // matrix
+
 
 #if DEBUG_MPI_OPERATIONS
+
 
             print_matrix(local_tuning_table, tuning_table_rows, tuning_table_columns, true);
 
 #endif
+
 
             char kernel_type_final_table[tuning_table_rows];
             memset(kernel_type_final_table, 'l', linear_rows);
@@ -545,65 +547,11 @@ int main(int argc, char *argv[]) {
     }// end of switch case
 
 
-#if DEBUG_TRAIN
 
-    std::string filepath = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
 
-    Dataset df_train = read_dataset(filepath, 70, 5, 5);
 
-    // TODO: change to parallel logic
-    if (process_rank == MASTER_PROCESS) {
 
-       char ker_type = 'p';
 
-       Kernel_SVM svm;
-       set_kernel_function(&svm, ker_type);
-       svm.verbose= true;
-
-       double Cost = 5;
-       double gamma = 0.1;
-       double coef0 = 0;
-       double degree = 1;
-       double params[4] = {Cost,gamma,coef0,degree};
-
-       double lr = 0.0001;
-       double limit = 0.1;
-
-       train(df_train, &svm, params, lr, limit);
-    }
-
-#elif DEBUG_TEST
-
-    // TODO
-
-#else
-
-//    if (process_rank == MASTER_PROCESS) {
-//
-//        std::string ker_type = "rbf";
-//
-//        KernelFunc K;
-//        std::vector<double> params = {1};
-//        Set_Kernel(ker_type, K, params);
-//
-//        // deserialize object from file savedata
-//        Kernel_SVM svm;
-//
-//
-//        {
-//            std::ifstream infile("../model.dat");
-//            boost::archive::text_iarchive archive(infile);
-//            archive >> svm;
-//
-//        }
-//
-//
-//        // svm.test(df_test);
-//
-//
-//        std::cout << "\n\nExecution completed." << std::endl;
-
-#endif
 
 #if PERFORMANCE_CHECK
 
