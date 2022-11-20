@@ -12,5 +12,5 @@ target_link_libraries(hpc2022 PUBLIC MPI::MPI_CXX)
 
 # for homebrew-installed libraries
 include_directories("/opt/homebrew/include")
-include_directories("/opt/homebrew/Cellar/libomp/15.0.4/include")
+include_directories("/opt/homebrew/Cellar/libomp/15.0.5/include")
 
