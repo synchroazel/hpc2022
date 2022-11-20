@@ -1,26 +1,58 @@
 #include "iostream"
 #include "mpi.h"
+#include <ctime>
+#include <sys/time.h>
 
 #include "Dataset.h"
-
 #include "tune_svm.h"
-
 #include "read_dataset.h"
 
 
 /* Macro to switch modes */
 #define CLI_ARGS false
 #define DEBUG_MPI_OPERATIONS false
+#define SHOW_LOGTIME true
 #define IMPLEMENTED_KERNELS 4
 #define NUMBER_OF_HYPER_PARAMETERS 4
 #define NUMBER_OF_PERFORMANCE_CHECKS 15
+
+
+void logtime() {
+
+    int process_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &process_rank);
+
+    char buffer[26];
+    int millisec;
+    struct tm *tm_info;
+    struct timeval tv;
+
+    gettimeofday(&tv, NULL);
+
+    millisec = lrint(tv.tv_usec / 1000.0); // Round to nearest millisec
+    if (millisec >= 1000) { // Allow for rounding up to nearest second
+        millisec -= 1000;
+        tv.tv_sec++;
+    }
+
+    tm_info = localtime(&tv.tv_sec);
+
+    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+
+#if SHOW_LOGTIME
+    printf("[rank %d at %s.%03d] ", process_rank, buffer, millisec);
+#endif
+
+}
 
 
 enum train_flag {
     training = 0, testing = 1, tuning = 2
 } flag;
 
-//  todo:
+
+
+//  TODO:
 //        implement:
 //                  cli args
 //                  open_mp
@@ -30,8 +62,9 @@ enum train_flag {
 //                  poly tuning
 //                  all together logic
 //        debug:
-//                  read and write from binary file
 //                  svm test
+
+
 
 int main(int argc, char *argv[]) {
 
@@ -55,11 +88,14 @@ int main(int argc, char *argv[]) {
     MPI_Barrier(MPI_COMM_WORLD);
 
     if (process_rank == MASTER_PROCESS) {
-        std::cout << "\nThis step is done by process 0 only to benchmark the speed of for loops\n";
+        logtime();
+        std::cout << "This step is done by process 0 only to benchmark the speed of for loops\n";
         double start = MPI_Wtime(), end = 0;
         for (int i = 0; i < 1000; i++) {}
         end = MPI_Wtime();
+        logtime();
         std::cout << "On this platform, a for loop cycle alone takes an average of " << (end - start) / 1000 << "\n\n";
+
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -101,17 +137,24 @@ int main(int argc, char *argv[]) {
     }
 #else
 
-    flag = training;
+    /**
+     * Flag selection (training, testing, tuning)
+     */
+
+    flag = testing;
+
+
     // std::string filepath_training = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
     std::string filepath_training = "/Users/azel/Developer/hpc2022/data/iris_train.csv";
     std::string filepath_validation = "../data/iris_validation.csv";
     std::string filepath_hyper_parameters = "../data/hyperparameters.csv"; // TODO: implement
+    std::string filepath_svm = "../saved_svm/radialr_C0.100000_G1.000000.dat";
     size_t rows_t = 70, rows_v = 30, columns = 5, target_column = 5;
     char ker_type = 'l';
 
     bool verbose = true;
 
-    std::string save_dir_path;
+    std::string save_dir_path = "/Users/azel/Developer/hpc2022/saved_svm/";
 
     double Cost = 5;
     double gamma = 0.1;
@@ -127,28 +170,45 @@ int main(int argc, char *argv[]) {
 
 #if PERFORMANCE_CHECK
 
+
+    /**
+     * Program startup
+     */
+
     auto *time_checks = (double *) calloc(NUMBER_OF_PERFORMANCE_CHECKS, sizeof(double));
     int time_iterator = 0;
     MPI_Barrier(MPI_COMM_WORLD);
     *(time_checks + time_iterator) = MPI_Wtime(); // start
 
     if (process_rank == MASTER_PROCESS) {
-        std::cout << "Program starts at time " << *(time_checks + time_iterator) << std::endl;
+        logtime();
+        std::cout << "Program starts at time " << *(time_checks + time_iterator) << "\n" << std::endl;
     }
     ++time_iterator;
 
 #endif
 
+    /**
+     * Switch start
+     */
+
+
     switch (flag) {
+
+
+        /// Training case
+
         case train_flag::training : {
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 #if PERFORMANCE_CHECK
 
             MPI_Barrier(MPI_COMM_WORLD);
             *(time_checks + time_iterator) = MPI_Wtime(); // start
 
             if (process_rank == MASTER_PROCESS) {
+                logtime();
                 std::cout << "Reading training dataset starts at time " << *(time_checks + time_iterator) << std::endl;
             }
             ++time_iterator;
@@ -164,10 +224,11 @@ int main(int argc, char *argv[]) {
 
             if (process_rank == MASTER_PROCESS) {
 
-                std::cout << "\nIt took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                logtime();
+                std::cout << "It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                           << " seconds\n" << std::endl;
 
-
+                logtime();
                 std::cout << "svm preparation starts at time " << *(time_checks + time_iterator) << std::endl;
             }
             ++time_iterator;
@@ -178,7 +239,7 @@ int main(int argc, char *argv[]) {
 
             Kernel_SVM svm;
 
-            svm.verbose= verbose;
+            svm.verbose = verbose;
             set_kernel_function(&svm, ker_type);
 
             double params[4] = {Cost, gamma, coef0, degree};
@@ -191,9 +252,10 @@ int main(int argc, char *argv[]) {
 
             if (process_rank == MASTER_PROCESS) {
 
-                std::cout << "\nIt took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                logtime();
+                std::cout << "It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                           << " seconds\n" << std::endl;
-
+                logtime();
                 std::cout << "Training starts at time " << *(time_checks + time_iterator) << std::endl;
             }
             ++time_iterator;
@@ -209,7 +271,8 @@ int main(int argc, char *argv[]) {
 
             if (process_rank == MASTER_PROCESS) {
 
-                std::cout << "\nIt took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                logtime();
+                std::cout << "It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                           << " seconds\n" << std::endl;
 
                 // std::cout << "Training starts at time " <<  *(time_checks + time_iterator) << std::endl;
@@ -220,22 +283,48 @@ int main(int argc, char *argv[]) {
 
             break;
         }
+
+            /// Testing case
+
         case train_flag::testing: {
 
 /* ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */
 
-            // TODO: implement
-            break;
+            Dataset df_test = read_dataset(filepath_validation, 30, 5, 5);
+
+            if (process_rank == MASTER_PROCESS) {
+
+                Kernel_SVM svm;
+
+                std::string saved_model_path = save_dir_path + filepath_svm;
+
+                read_svm(&svm, saved_model_path);
+
+                test(df_test, &svm);
+
+                logtime();
+                std::cout << "Testing completed." << std::endl;
+
+                break;
+
+            }
+
         }
+
+            /// Tuning case
+
         case train_flag::tuning: {
 
 /* ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */
 
             if (process_rank == MASTER_PROCESS) {
+                logtime();
                 std::cout << "Training Dataset filepath: " << filepath_training << std::endl;
+                logtime();
                 std::cout << "The dataset has " << rows_t << " rows and " << columns << " columns." << std::endl;
-
+                logtime();
                 std::cout << "Validation Dataset filepath: " << filepath_validation << std::endl;
+                logtime();
                 std::cout << "The dataset has " << rows_v << " rows and " << columns << " columns." << std::endl;
             }
 
@@ -266,12 +355,14 @@ int main(int argc, char *argv[]) {
             *(time_checks + time_iterator) = MPI_Wtime();
 
             if (process_rank == MASTER_PROCESS) {
+                logtime();
                 std::cout << "\nAllocating inital vectors took "
                           << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1) << " seconds\n"
                           << std::endl;
             }
 
             if (process_rank == MASTER_PROCESS) {
+                logtime();
                 std::cout << "Training dataset read starts at time " << *(time_checks + time_iterator) << "\n"
                           << std::endl;
             }
@@ -286,12 +377,14 @@ int main(int argc, char *argv[]) {
             *(time_checks + time_iterator) = MPI_Wtime(); // end of allocations
 
             if (process_rank == MASTER_PROCESS) {
+                logtime();
                 std::cout << "\nReading training dataset took a total of "
                           << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1) << " seconds\n"
                           << std::endl;
             }
 
             if (process_rank == MASTER_PROCESS) {
+                logtime();
                 std::cout << "Validation dataset read starts at time " << *(time_checks + time_iterator) << "\n"
                           << std::endl;
             }
@@ -307,11 +400,13 @@ int main(int argc, char *argv[]) {
             *(time_checks + time_iterator) = MPI_Wtime(); // end of allocations
 
             if (process_rank == MASTER_PROCESS) {
+                logtime();
                 std::cout << "\nReading validation dataset took "
                           << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1) << " seconds\n"
                           << std::endl;
             }
             if (process_rank == MASTER_PROCESS) {
+                logtime();
                 std::cout << "Memory allocation for tuning starts at time " << *(time_checks + time_iterator) << "\n"
                           << std::endl;
             }
@@ -339,10 +434,8 @@ int main(int argc, char *argv[]) {
             }
 
 
-
-
-
-            auto* final_tuning_table=(double *) calloc(tuning_table_rows * tuning_table_columns, sizeof (double )); // matrix
+            auto *final_tuning_table = (double *) calloc(tuning_table_rows * tuning_table_columns,
+                                                         sizeof(double)); // matrix
 
 
 #if DEBUG_MPI_OPERATIONS
@@ -352,7 +445,8 @@ int main(int argc, char *argv[]) {
 
 #endif
 
-            auto* local_tuning_table=(double *) calloc(tuning_table_rows * tuning_table_columns, sizeof (double )); // matrix
+            auto *local_tuning_table = (double *) calloc(tuning_table_rows * tuning_table_columns,
+                                                         sizeof(double)); // matrix
 
 
 #if DEBUG_MPI_OPERATIONS
@@ -542,14 +636,10 @@ int main(int argc, char *argv[]) {
 
             free(final_tuning_table);
 
-        } // end of tuning part
-    }// end of switch case
-
-
-
-
-
-
+        }
+            // end of tuning part
+    }
+    // end of switch case
 
 
 #if PERFORMANCE_CHECK
@@ -558,8 +648,10 @@ int main(int argc, char *argv[]) {
     *(time_checks + time_iterator) = MPI_Wtime();
 
     if (process_rank == MASTER_PROCESS) {
-        std::cout << "\n program ends at time " << *(time_checks + time_iterator) << std::endl;
-        std::cout << "\n Last step took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+        logtime();
+        std::cout << "Program ends at time " << *(time_checks + time_iterator) << std::endl;
+        logtime();
+        std::cout << "Last step took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                   << "seconds\n" << std::endl;
     }
     // ++time_iterator; // end

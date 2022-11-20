@@ -96,7 +96,11 @@ void set_kernel_function(Kernel_SVM *svm, char kernel_type) {
 }
 // TODO: add error checks
 
-// serialize
+
+/**
+ * Support for serialization
+ */
+
 int save_svm(const Kernel_SVM *svm, const std::string &path) {
 
     FILE *file_to_write;
@@ -145,13 +149,16 @@ int save_svm(const Kernel_SVM *svm, const std::string &path) {
     return 0; // no problems
 }
 
+/**
+ * Support for deserialization
+ */
 
 int read_svm(Kernel_SVM *svm, const std::string &path) {
     FILE *file_to_read;
     file_to_read = fopen(path.c_str(), "rb");
 
     if (!file_to_read) {
-        std::cout << "Error opening file. Saving was not possible !";
+        std::cout << "Error opening file. Reading was not possible !";
         return 1;
     }
 
@@ -169,6 +176,13 @@ int read_svm(Kernel_SVM *svm, const std::string &path) {
     svm->arr_xs_in = (double *) malloc(svm->arr_xs_in_row_size * svm->arr_xs_column_size * sizeof(double));
     svm->arr_ys_in = (int *) malloc(svm->arr_xs_in_row_size * sizeof(int));
     svm->arr_alpha_s_in = (double *) malloc(svm->arr_alpha_in_size * sizeof(double));
+
+    fread(svm->arr_xs, sizeof(double) * svm->arr_xs_row_size * svm->arr_xs_column_size, 1, file_to_read);
+    fread(svm->arr_ys, sizeof(int) * svm->arr_xs_row_size, 1, file_to_read);
+    fread(svm->arr_alpha_s, sizeof(double) * svm->arr_xs_row_size, 1, file_to_read);
+    fread(svm->arr_xs_in, sizeof(double) * svm->arr_xs_in_row_size * svm->arr_xs_column_size, 1, file_to_read);
+    fread(svm->arr_ys_in, sizeof(int) * svm->arr_xs_in_row_size, 1, file_to_read);
+    fread(svm->arr_alpha_s_in, sizeof(double) * svm->arr_alpha_in_size, 1, file_to_read);
 
     // b
     fread(&svm->b, sizeof(double), 1, file_to_read);

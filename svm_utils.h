@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 #include <cmath>
+#include <iomanip>
+
 #include "svm.h"
 #include "Dataset.h"
 #include "omp.h"
@@ -510,6 +512,15 @@ void test(Dataset test_data,
             (double) (svm->correct_c1 + svm->correct_c2) / (double) (c1 + c2);
     svm->accuracy_c1 = (double) svm->correct_c1 / (double) c1;
     svm->accuracy_c2 = (double) svm->correct_c2 / (double) c2;
+
+    std::cout << "\n┌────────────── Test Results ───────────────┐" << std::endl;
+    std::cout << "  accuracy-all:\t\t" << std::setprecision(6) << svm->accuracy << " ("
+              << svm->correct_c1 + svm->correct_c2 << "/" << c1 + c2 << " hits)" << std::endl;
+    std::cout << "  accuracy-class1:\t" << std::setprecision(6) << svm->accuracy_c1 << " (" << svm->correct_c1 << "/"
+              << c1 << " hits)" << std::endl;
+    std::cout << "  accuracy-class2:\t" << std::setprecision(6) << svm->accuracy_c2 << " (" << svm->correct_c2 << "/"
+              << c2 << " hits)" << std::endl;
+    std::cout << "└───────────────────────────────────────────┘" << std::endl;
 
     free(class1_data);
     free(class2_data);
