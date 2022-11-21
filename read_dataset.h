@@ -1,13 +1,15 @@
 #include "iostream"
 #include "pre_process.h"
 #include "mpi.h"
+#include "utils.h"
 
 #include <cmath>
-//#include "math.h"
+
 
 #define MASTER_PROCESS 0
 #define DEBUG_READ_DATASET false
 #define PERFORMANCE_CHECK true
+
 void build_mpi_datatype(MPI_Datatype *MPI_Dataset, Dataset df) {
 
     /**
@@ -42,7 +44,7 @@ void build_mpi_datatype(MPI_Datatype *MPI_Dataset, Dataset df) {
     MPI_Type_commit(MPI_Dataset);
 }
 
-Dataset read_dataset(const std::string& filepath, size_t rows, size_t columns, size_t target_column) {
+Dataset read_dataset(const std::string &filepath, size_t rows, size_t columns, size_t target_column) {
 
     /**
      * Read dataset from a file, given filepath, rows, columns and target column
@@ -75,7 +77,8 @@ Dataset read_dataset(const std::string& filepath, size_t rows, size_t columns, s
         cols_per_process = 0;
 
         if (process_rank == MASTER_PROCESS) {
-            std::cout << "Case 1: \nEach process reads up to " << rows_per_process << " rows and all columns"
+            logtime();
+            std::cout << "Case 1: Each process reads up to " << rows_per_process << " rows and all columns"
                       << std::endl;
         }
 
@@ -85,7 +88,8 @@ Dataset read_dataset(const std::string& filepath, size_t rows, size_t columns, s
         cols_per_process = (int) std::ceil(rows / world_size);
 
         if (process_rank == MASTER_PROCESS) {
-            std::cout << "Case 2: \nEach process reads all rows and up to " << cols << " columns" << std::endl;
+            logtime();
+            std::cout << "Case 2: Each process reads all rows and up to " << cols << " columns" << std::endl;
         }
 
     } else if (world_size <= rows * columns) {
@@ -102,7 +106,8 @@ Dataset read_dataset(const std::string& filepath, size_t rows, size_t columns, s
         }
 
         if (process_rank == MASTER_PROCESS) {
-            std::cout << "Case 3: \nEach process reads up to " << rows_per_process << " rows and " << cols_per_process
+            logtime();
+            std::cout << "Case 3: Each process reads up to " << rows_per_process << " rows and " << cols_per_process
                       << " columns" << std::endl;
         }
 
@@ -112,11 +117,13 @@ Dataset read_dataset(const std::string& filepath, size_t rows, size_t columns, s
         processes_for_input_read = rows * columns;
 
         if (process_rank == MASTER_PROCESS) {
-            std::cout << "Case 4: \nEach process reads element. You should consider linear read" << std::endl;
+            logtime();
+            std::cout << "Case 4: Each process reads element. You should consider linear read" << std::endl;
         }
     }
 
     if (process_rank == MASTER_PROCESS) {
+        logtime();
         std::cout << "There are a total of " << world_size << " processes." << std::endl;
     }
 
@@ -152,13 +159,13 @@ Dataset read_dataset(const std::string& filepath, size_t rows, size_t columns, s
 
     }
 
-    MPI_Error_control = MPI_Allreduce(local_x, final_x, (int)(r * cols), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Error_control = MPI_Allreduce(local_x, final_x, (int) (r * cols), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     if (MPI_Error_control != MPI_SUCCESS) {
         std::cout << "Error during x reduce" << std::endl;
         exit(1);
     }
 
-    MPI_Error_control = MPI_Allreduce(local_y, y, (int)(r), MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Error_control = MPI_Allreduce(local_y, y, (int) (r), MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     if (MPI_Error_control != MPI_SUCCESS) {
         std::cout << "Error during y reduce" << std::endl;
         exit(1);

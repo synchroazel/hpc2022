@@ -2,10 +2,11 @@
 #include <string>
 #include <cmath>
 #include <iomanip>
+#include <omp.h>
 
 #include "svm.h"
 #include "Dataset.h"
-#include "omp.h"
+#include "utils.h"
 
 #define DEBUG_SUPPORT_VECTORS false
 #define MASTER_PROCESS 0
@@ -123,7 +124,9 @@ void train(const Dataset &training_data,
            bool save_svm_flag = true,
            std::string svm_save_dir_path = "",
            size_t class_1 = 0,
-           const double eps = 0.0000001
+           const double eps = 0.0000001,
+           int world_size = 1,
+           int process_rank = 0
 ) {
 
     // TODO: set process
@@ -172,9 +175,12 @@ void train(const Dataset &training_data,
 
     // training
     if (svm->verbose) {
-        log("\n");
-        log("/////////////////////// Training ///////////////////////\n");
+        std::cout << "\n┌────────────────────── Training ───────────────────────┐" << std::endl;
     }
+
+
+    /* TODO: parallelize this ------------------------------------------------------ */
+
 
     do {
 
@@ -227,14 +233,17 @@ void train(const Dataset &training_data,
 
         // output Residual Error
         if (svm->verbose) {
-            log("\r error: " + std::to_string(error));
+            std::cout << "\r error = " << error << std::flush;
         }
 
     } while (judge);
 
+
+    /* ----------------------------------------------------------------------------- */
+
+
     if (svm->verbose) {
-        log("\n");
-        log("////////////////////////////////////////////////////////\n");
+        std::cout << "\n├───────────────────────────────────────────────────────┤" << std::endl;
     }
 
     // initialize, then realloc
@@ -349,8 +358,8 @@ void train(const Dataset &training_data,
     }
     svm->b /= (double) (svm->arr_xs_row_size + svm->arr_xs_in_row_size);
     if (svm->verbose) {
-        log("bias = " + std::to_string(svm->b) + "\n");
-        log("////////////////////////////////////////////////////////\n\n");
+        std::cout << " bias = " << svm->b << std::endl;
+        std::cout << "└───────────────────────────────────────────────────────┘\n" << std::endl;
     }
 
 #if DEBUG_SUPPORT_VECTORS
@@ -401,9 +410,11 @@ void train(const Dataset &training_data,
 #endif
 
     if (svm->verbose) {
-        log("Ns (number of support vectors on margin) = " + std::to_string(svm->arr_xs_row_size) + "\n");
 
-        log("Ns_in (number of support vectors inside margin) = " + std::to_string(svm->arr_xs_in_row_size) + "\n");
+        logtime();
+        std::cout << "Number of support vectors *on* margin) = " << svm->arr_xs_row_size << std::endl;
+        logtime();
+        std::cout << "Number of support vectors *inside* margin) = " << svm->arr_xs_in_row_size << "\n" << std::endl;
     }
 
     if (save_svm_flag) {
@@ -449,7 +460,8 @@ void train(const Dataset &training_data,
 
         save_svm(svm, s);
 
-        std::cout << "\nSvm was saved as " << s << std::endl;
+        logtime();
+        std::cout << "Svm was saved as " << s << std::endl;
     }
 
     // TODO: capire di cosa fare il free

@@ -1,21 +1,18 @@
-#include "iostream"
-#include "mpi.h"
-#include <ctime>
-#include <sys/time.h>
+#include <iostream>
+#include <mpi.h>
 
 #include "Dataset.h"
 #include "tune_svm.h"
 #include "read_dataset.h"
-
+#include "utils.h"
 
 /* Macro to switch modes */
 #define CLI_ARGS false
 #define DEBUG_MPI_OPERATIONS false
-#define SHOW_LOGTIME true
 #define IMPLEMENTED_KERNELS 4
 #define NUMBER_OF_HYPER_PARAMETERS 4
 #define NUMBER_OF_PERFORMANCE_CHECKS 15
-
+#define SHOW_LOGTIME true
 
 void logtime() {
 
@@ -29,8 +26,8 @@ void logtime() {
 
     gettimeofday(&tv, NULL);
 
-    millisec = lrint(tv.tv_usec / 1000.0); // Round to nearest millisec
-    if (millisec >= 1000) { // Allow for rounding up to nearest second
+    millisec = lrint(tv.tv_usec / 1000.0);
+    if (millisec >= 1000) {
         millisec -= 1000;
         tv.tv_sec++;
     }
@@ -141,7 +138,7 @@ int main(int argc, char *argv[]) {
      * Flag selection (training, testing, tuning)
      */
 
-    flag = testing;
+    flag = training;
 
 
     // std::string filepath_training = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
@@ -262,7 +259,7 @@ int main(int argc, char *argv[]) {
 
 #endif
 
-            train(df_train, &svm, params, lr, limit, true, save_dir_path, 0, eps);
+            train(df_train, &svm, params, lr, limit, true, save_dir_path, 0, eps, world_size, process_rank);
 
 #if PERFORMANCE_CHECK
 
