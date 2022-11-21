@@ -121,16 +121,21 @@ void train(const Dataset &training_data,
            double hyper_parameters[4],
            const double lr,
            const double limit,
+           int process_offset,
+           int available_processes,
            bool save_svm_flag = true,
-           std::string svm_save_dir_path = "",
+           const std::string& svm_save_dir_path = "",
            size_t class_1 = 0,
            const double eps = 0.0000001,
            int world_size = 1,
            int process_rank = 0
 ) {
 
-    // TODO: set process
-
+    // TODO: implement parallelization
+    svm->params[0] = hyper_parameters[0];
+    svm->params[1] = hyper_parameters[1];
+    svm->params[2] = hyper_parameters[2];
+    svm->params[3] = hyper_parameters[3];
     int y[training_data.rows_number];  // array
     memset(y, 0, training_data.rows_number * sizeof(int));
     size_t i = 0;
@@ -475,8 +480,11 @@ void train(const Dataset &training_data,
 
 void test(Dataset test_data,
           Kernel_SVM *svm,
+          int process_offset,
+          int available_processes,
           size_t class_1 = 0) {
 
+    // todo: implement parallel logic
 
     // split all training data into class1 and class2 data
 
@@ -525,14 +533,20 @@ void test(Dataset test_data,
     svm->accuracy_c1 = (double) svm->correct_c1 / (double) c1;
     svm->accuracy_c2 = (double) svm->correct_c2 / (double) c2;
 
-    std::cout << "\n┌────────────── Test Results ───────────────┐" << std::endl;
-    std::cout << "  accuracy-all:\t\t" << std::setprecision(6) << svm->accuracy << " ("
-              << svm->correct_c1 + svm->correct_c2 << "/" << c1 + c2 << " hits)" << std::endl;
-    std::cout << "  accuracy-class1:\t" << std::setprecision(6) << svm->accuracy_c1 << " (" << svm->correct_c1 << "/"
-              << c1 << " hits)" << std::endl;
-    std::cout << "  accuracy-class2:\t" << std::setprecision(6) << svm->accuracy_c2 << " (" << svm->correct_c2 << "/"
-              << c2 << " hits)" << std::endl;
-    std::cout << "└───────────────────────────────────────────┘" << std::endl;
+    if(svm->verbose){
+        std::cout << "\n┌────────────── Test Results ───────────────┐" << std::endl;
+
+        std::cout << "Cost: " << svm->params[0] << " | Gamma: " << svm->params[1] << " | Coef0: " << svm->params[2] << " | Degree: " << svm->params[3] << std::endl;
+        std::cout << "  accuracy-all:\t\t" << std::setprecision(6) << svm->accuracy << " ("
+                  << svm->correct_c1 + svm->correct_c2 << "/" << c1 + c2 << " hits)" << std::endl;
+        std::cout << "  accuracy-class1:\t" << std::setprecision(6) << svm->accuracy_c1 << " (" << svm->correct_c1 << "/"
+                  << c1 << " hits)" << std::endl;
+        std::cout << "  accuracy-class2:\t" << std::setprecision(6) << svm->accuracy_c2 << " (" << svm->correct_c2 << "/"
+                  << c2 << " hits)" << std::endl;
+        std::cout << "└───────────────────────────────────────────┘" << std::endl;
+    }
+
+
 
     free(class1_data);
     free(class2_data);
