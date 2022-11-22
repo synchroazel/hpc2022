@@ -2,7 +2,6 @@
 #include <string>
 #include <cmath>
 #include <iomanip>
-#include <omp.h>
 
 #include "svm.h"
 #include "Dataset.h"
@@ -124,12 +123,16 @@ void train(const Dataset &training_data,
            int process_offset,
            int available_processes,
            bool save_svm_flag = true,
-           const std::string& svm_save_dir_path = "",
+           const std::string &svm_save_dir_path = "",
            size_t class_1 = 0,
-           const double eps = 0.0000001,
-           int world_size = 1,
-           int process_rank = 0
+           const double eps = 0.0000001
 ) {
+
+
+    // Get the rank of the process
+    int process_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &process_rank);
+
 
     // TODO: implement parallelization
     svm->params[0] = hyper_parameters[0];
@@ -162,21 +165,23 @@ void train(const Dataset &training_data,
 
     bool judge;
     double item1, item2, item3;
+    double item3_local = 0.0;
+    double alpha[N];
     double delta;
     double beta;
     double error;
 
     // set Lagrange Multiplier and Parameters
-    double alpha[N];
-    memset(alpha, 0, N * sizeof(double));
+    double local_alpha[N];
+    memset(local_alpha, 0, N * sizeof(double));
 
     beta = 1.0;
 
     // tmp rows
     double xi[training_data.predictors_column_number];
-    memset(alpha, 0, training_data.predictors_column_number * sizeof(double));
+    memset(local_alpha, 0, training_data.predictors_column_number * sizeof(double));
     double xj[training_data.predictors_column_number];
-    memset(alpha, 0, training_data.predictors_column_number * sizeof(double));
+    memset(local_alpha, 0, training_data.predictors_column_number * sizeof(double));
 
     // training
     if (svm->verbose) {
@@ -184,7 +189,8 @@ void train(const Dataset &training_data,
     }
 
 
-    /* TODO: parallelize this ------------------------------------------------------ */
+    /* TODO: parallelize this */
+    /* ----------------------------------------------------------------------------- */
 
 
     do {
@@ -192,48 +198,60 @@ void train(const Dataset &training_data,
         judge = false;
         error = 0.0;
 
-        // update Alpha
-        for (i = 0; i < N; i++) {
+        double iters_per_process = N / available_processes;  // DEBUG
 
-            // compute the partial derivative with respect to alpha
+        // update Alpha
+        for (i = process_offset * iters_per_process; i < process_offset + iters_per_process; i++) {
+
+            double local_delta = 0.0;
 
             item1 = 0;
             for (j = 0; j < N; j++) {
                 get_row(training_data, i, false, xi);
                 get_row(training_data, j, false, xj);
-                item1 += alpha[j] * (double) y[i] * (double) y[j] *
+                item1 += local_alpha[j] * (double) y[i] * (double) y[j] *
                          svm->K(xi, xj, training_data.predictors_column_number, hyper_parameters);
             }
 
-            // set item 2
             item2 = 0;
-
             for (j = 0; j < N; j++) {
-                item2 += alpha[j] * (double) y[i] * (double) y[j];
+                item2 += local_alpha[j] * (double) y[i] * (double) y[j];
             }
 
-            // set such partial derivative to Delta
+            local_delta = 1.0 - item1 - beta * item2;
 
-            delta = 1.0 - item1 - beta * item2;
-
-            // update
-            alpha[i] += lr * delta;
-            if (alpha[i] < 0.0) {
-                alpha[i] = 0.0;
-            } else if (alpha[i] > hyper_parameters[0]/*Cost*/) {
-                alpha[i] = hyper_parameters[0];
+            local_alpha[i] += lr * local_delta;
+            if (local_alpha[i] < 0.0) {
+                local_alpha[i] = 0.0;
+            } else if (local_alpha[i] > hyper_parameters[0]/*Cost*/) {
+                local_alpha[i] = hyper_parameters[0];
             } else if (std::abs(delta) > limit) {
                 judge = true;
                 error += std::abs(delta) - limit;
             }
 
+
         }
 
+        memset(alpha, 0, N * sizeof(double));
+
+        // REDUCE with sum all alphas
+        MPI_Allreduce(&local_alpha, &alpha, N, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+
+        // justify the use of Reduce
+
         // update bias Beta
-        item3 = 0.0;
-        for (i = 0; i < N; i++) {
-            item3 += alpha[i] * (double) y[i];
+        item3_local = 0.0;
+        for (i = process_rank * iters_per_process; i < (process_rank + 1) * iters_per_process; i++) {
+            item3_local += alpha[i] * (double) y[i];
+            // like before
         }
+
+        // reduce all item3 with sum
+        double item3_sum;
+        MPI_Allreduce(&item3_local, &item3, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
         beta += item3 * item3 / 2.0;
 
         // output Residual Error
@@ -241,11 +259,14 @@ void train(const Dataset &training_data,
             std::cout << "\r error = " << error << std::flush;
         }
 
+
     } while (judge);
 
 
     /* ----------------------------------------------------------------------------- */
 
+
+    // Reduce alpha
 
     if (svm->verbose) {
         std::cout << "\n├───────────────────────────────────────────────────────┤" << std::endl;
@@ -326,6 +347,7 @@ void train(const Dataset &training_data,
     print_vector(svm->arr_alpha_s_in, svm->arr_alpha_in_size);
 
 #endif
+
     // realloc to cut off extra 0s
     // TODO: check if realloc does bogus stuff
 
@@ -382,7 +404,7 @@ void train(const Dataset &training_data,
     log("ys: ");
     for (i = 0; i < svm->arr_ys_size; i++) {
         log(std::to_string(svm->arr_ys[i]));
-    } 
+    }
     log("\n");
 
     //print svm->alpha_s
@@ -422,8 +444,10 @@ void train(const Dataset &training_data,
         std::cout << "Number of support vectors *inside* margin) = " << svm->arr_xs_in_row_size << "\n" << std::endl;
     }
 
-    if (save_svm_flag) {
-        /** Write svm to file **/
+    if ((save_svm_flag) & (process_rank == MASTER_PROCESS)) {
+
+        /** Write svm to file */
+
         std::string s;
         if (svm_save_dir_path.empty()) {
             s = "./";
@@ -467,12 +491,12 @@ void train(const Dataset &training_data,
 
         logtime();
         std::cout << "Svm was saved as " << s << std::endl;
+
     }
 
     // TODO: capire di cosa fare il free
 
 }
-
 
 /**
  * Testing function
@@ -486,71 +510,82 @@ void test(Dataset test_data,
 
     // todo: implement parallel logic
 
-    // split all training data into class1 and class2 data
+    // Get the rank of the process
+    int process_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &process_rank);
 
-    auto *class1_data = (double *) calloc(test_data.rows_number * test_data.predictors_column_number, sizeof(double));
-    auto *class2_data = (double *) calloc(test_data.rows_number * test_data.predictors_column_number, sizeof(double));
 
-    auto *cur_row = (double *) calloc(test_data.predictors_column_number, sizeof(double));
-    size_t c1 = 0, c2 = 0;
+    if (process_rank == process_offset) {
 
-    for (size_t i = 0; i < test_data.rows_number; i++) {
 
-        get_row(test_data, i, false, cur_row);
+        auto *class1_data = (double *) calloc(test_data.rows_number * test_data.predictors_column_number,
+                                              sizeof(double));
+        auto *class2_data = (double *) calloc(test_data.rows_number * test_data.predictors_column_number,
+                                              sizeof(double));
 
-        if (test_data.class_vector[i] == test_data.unique_classes[class_1]) {
-            memcpy(class1_data + (c1 * test_data.predictors_column_number), cur_row,
-                   test_data.predictors_column_number * sizeof(double));
-            ++c1;
-        } else {
-            memcpy(class2_data + (c2 * test_data.predictors_column_number), cur_row,
-                   test_data.predictors_column_number * sizeof(double));
-            ++c2;
+        auto *cur_row = (double *) calloc(test_data.predictors_column_number, sizeof(double));
+        size_t c1 = 0, c2 = 0;
+
+        for (size_t i = 0; i < test_data.rows_number; i++) {
+
+            get_row(test_data, i, false, cur_row);
+
+            if (test_data.class_vector[i] == test_data.unique_classes[class_1]) {
+                memcpy(class1_data + (c1 * test_data.predictors_column_number), cur_row,
+                       test_data.predictors_column_number * sizeof(double));
+                ++c1;
+            } else {
+                memcpy(class2_data + (c2 * test_data.predictors_column_number), cur_row,
+                       test_data.predictors_column_number * sizeof(double));
+                ++c2;
+            }
         }
-    }
 
-    size_t i;
-    int result = 0;
+        size_t i;
+        int result = 0;
 
-    svm->correct_c1 = 0;
-    for (i = 0; i < c1; i++) {
-        result = (int) g(svm, class1_data + index(i, 0, test_data.predictors_column_number));
-        if (result == -1) {
-            ++svm->correct_c1;
+        svm->correct_c1 = 0;
+        for (i = 0; i < c1; i++) {
+            result = (int) g(svm, class1_data + index(i, 0, test_data.predictors_column_number));
+            if (result == -1) {
+                ++svm->correct_c1;
+            }
         }
-    }
 
-    svm->correct_c2 = 0;
-    for (i = 0; i < c1; i++) {
-        result = (int) g(svm, class2_data + index(i, 0, test_data.predictors_column_number));
-        if (result == 1) {
-            ++svm->correct_c2;
+        svm->correct_c2 = 0;
+        for (i = 0; i < c1; i++) {
+            result = (int) g(svm, class2_data + index(i, 0, test_data.predictors_column_number));
+            if (result == 1) {
+                ++svm->correct_c2;
+            }
         }
+
+        svm->accuracy =
+                (double) (svm->correct_c1 + svm->correct_c2) / (double) (c1 + c2);
+        svm->accuracy_c1 = (double) svm->correct_c1 / (double) c1;
+        svm->accuracy_c2 = (double) svm->correct_c2 / (double) c2;
+
+        if (svm->verbose) {
+            std::cout << "\n┌───────────────── Test Results ──────────────────┐" << std::endl;
+
+            std::cout << "  Cost: " << svm->params[0] << " | Gamma: " << svm->params[1] << " | Coef0: "
+                      << svm->params[2] << " | Degree: " << svm->params[3] << std::endl;
+            std::cout << "  accuracy-all:\t\t" << std::setprecision(6) << svm->accuracy << " ("
+                      << svm->correct_c1 + svm->correct_c2 << "/" << c1 + c2 << " hits)" << std::endl;
+            std::cout << "  accuracy-class1:\t" << std::setprecision(6) << svm->accuracy_c1 << " (" << svm->correct_c1
+                      << "/"
+                      << c1 << " hits)" << std::endl;
+            std::cout << "  accuracy-class2:\t" << std::setprecision(6) << svm->accuracy_c2 << " (" << svm->correct_c2
+                      << "/"
+                      << c2 << " hits)" << std::endl;
+            std::cout << "└─────────────────────────────────────────────────┘\n" << std::endl;
+        }
+
+        free(class1_data);
+        free(class2_data);
+        free(cur_row);
+
     }
-
-    svm->accuracy =
-            (double) (svm->correct_c1 + svm->correct_c2) / (double) (c1 + c2);
-    svm->accuracy_c1 = (double) svm->correct_c1 / (double) c1;
-    svm->accuracy_c2 = (double) svm->correct_c2 / (double) c2;
-
-    if(svm->verbose){
-        std::cout << "\n┌────────────── Test Results ───────────────┐" << std::endl;
-
-        std::cout << "Cost: " << svm->params[0] << " | Gamma: " << svm->params[1] << " | Coef0: " << svm->params[2] << " | Degree: " << svm->params[3] << std::endl;
-        std::cout << "  accuracy-all:\t\t" << std::setprecision(6) << svm->accuracy << " ("
-                  << svm->correct_c1 + svm->correct_c2 << "/" << c1 + c2 << " hits)" << std::endl;
-        std::cout << "  accuracy-class1:\t" << std::setprecision(6) << svm->accuracy_c1 << " (" << svm->correct_c1 << "/"
-                  << c1 << " hits)" << std::endl;
-        std::cout << "  accuracy-class2:\t" << std::setprecision(6) << svm->accuracy_c2 << " (" << svm->correct_c2 << "/"
-                  << c2 << " hits)" << std::endl;
-        std::cout << "└───────────────────────────────────────────┘" << std::endl;
-    }
-
-
-
-    free(class1_data);
-    free(class2_data);
-    free(cur_row);
 
 }
 
