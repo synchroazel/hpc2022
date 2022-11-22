@@ -149,12 +149,12 @@ int main(int argc, char *argv[]) {
 
 
 
-    std::string filepath_training = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
-    //std::string filepath_training = "/Users/azel/Developer/hpc2022/data/iris_train.csv";
-    //std::string filepath_validation = "../data/iris_validation.csv";
-    std::string filepath_validation = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_validation.csv";
+    // std::string filepath_training = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
+    std::string filepath_training = "/Users/azel/Developer/hpc2022/data/iris_train.csv";
+    std::string filepath_validation = "/Users/azel/Developer/hpc2022/data/iris_validation.csv";
+    // std::string filepath_validation = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_validation.csv";
     std::string filepath_hyper_parameters = "../data/hyperparameters.csv"; // TODO: implement
-    std::string filepath_svm = "../saved_svm/radialr_C0.100000_G1.000000.dat";
+    std::string filepath_svm = "/Users/azel/Developer/hpc2022/saved_svm/radialr_C0.100000_G1.000000.svm";
     size_t rows_t = 70, rows_v = 30, columns = 5, target_column = 5;
     char ker_type = 'l';
 
@@ -305,7 +305,7 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-            /// Testing case
+        /// Testing case
 
         case train_flag::testing: {
 
@@ -313,28 +313,21 @@ int main(int argc, char *argv[]) {
 
             Dataset df_test = read_dataset(filepath_validation, 30, 5, 5);
 
-            if (process_rank == MASTER_PROCESS) {
+            Kernel_SVM svm;
 
-                Kernel_SVM svm;
+            std::string saved_model_path = filepath_svm;
 
-                std::string saved_model_path = save_dir_path + filepath_svm;
+            read_svm(&svm, saved_model_path);
 
-                read_svm(&svm, saved_model_path);
+            svm.verbose = true;
 
-                test(df_test, &svm, MASTER_PROCESS, world_size);
+            test(df_test, &svm, MASTER_PROCESS, world_size);
 
-#if SHOW_LOGTIME
-                logtime();
-#endif
-                std::cout << "Testing completed." << std::endl;
-
-                break;
-
-            }
+            break;
 
         }
 
-            /// Tuning case
+        /// Tuning case
 
         case train_flag::tuning: {
 
@@ -690,7 +683,7 @@ int main(int argc, char *argv[]) {
         std::cout << "Program ends at time " << *(time_checks + time_iterator) << std::endl;
 
         std::cout << "Last step took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
-                  << "seconds\n" << std::endl;
+                  << " seconds\n" << std::endl;
     }
     // ++time_iterator; // end
 
