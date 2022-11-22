@@ -8,12 +8,12 @@
 
 /* Macro to switch modes */
 #define CLI_ARGS false
-#define DEBUG_MPI_OPERATIONS false
 #define IMPLEMENTED_KERNELS 4
 #define NUMBER_OF_HYPER_PARAMETERS 4
 #define NUMBER_OF_PERFORMANCE_CHECKS 15
 
 #define SHOW_LOGTIME true
+#define DEBUG_MAIN false
 
 
 
@@ -60,10 +60,6 @@ enum train_flag {
 //                  cli args
 //                  open_mp
 //                  mpi logic for train and test
-//                  radial tuning
-//                  sigmoid tuning
-//                  poly tuning
-//                  all together logic
 //        debug:
 //                  svm test
 
@@ -103,8 +99,6 @@ int main(int argc, char *argv[]) {
     MPI_Barrier(MPI_COMM_WORLD);
 
 #endif
-
-    // enum relevant_metric {Accuracy = NUMBER_OF_HYPER_PARAMETERS + 1, AccuracyC1 = NUMBER_OF_HYPER_PARAMETERS +2, AccuracyC3 = NUMBER_OF_HYPER_PARAMETERS +3}metric;
 
 #if CLI_ARGS
     // Initialize the MPI environment
@@ -367,7 +361,7 @@ int main(int argc, char *argv[]) {
 
 #else
 
-            size_t cost_array_size = 6, gamma_array_size = 8, coef0_array_size = 6, degree_array_size = 7;
+            int cost_array_size = 6, gamma_array_size = 8, coef0_array_size = 6, degree_array_size = 7;
             double cost_array[] = {0.001, 0.01, 0.05, 0.1, 0.5, 1};//, 2, 5, 10, 100};
             double gamma_array[] = {0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10};
             double coef0_array[] = {0, 0.5, 1, 2.5, 5, 10};
@@ -453,13 +447,13 @@ int main(int argc, char *argv[]) {
 
             // TODO: refactor?
 
-            size_t linear_rows = cost_array_size;
-            size_t radial_rows = cost_array_size * gamma_array_size;
-            size_t sigmoid_rows = cost_array_size * gamma_array_size * coef0_array_size;
-            size_t polynomial_rows = cost_array_size * gamma_array_size * coef0_array_size * degree_array_size;
+            int linear_rows = cost_array_size;
+            int radial_rows = cost_array_size * gamma_array_size;
+            int sigmoid_rows = cost_array_size * gamma_array_size * coef0_array_size;
+            int polynomial_rows = cost_array_size * gamma_array_size * coef0_array_size * degree_array_size;
 
-            size_t tuning_table_rows = linear_rows + radial_rows + sigmoid_rows + polynomial_rows;
-            size_t tuning_table_columns = NUMBER_OF_HYPER_PARAMETERS + 1/* accuracy*/ + 1/*class 1 accuracy*/ +
+            int tuning_table_rows = linear_rows + radial_rows + sigmoid_rows + polynomial_rows;
+            int tuning_table_columns = NUMBER_OF_HYPER_PARAMETERS + 1/* accuracy*/ + 1/*class 1 accuracy*/ +
                                           1/*class 2 accuracy*/; // NB: type of kernel will be printed separately
             if (process_rank == MASTER_PROCESS) {
                 std::cout << "There are a total of " << IMPLEMENTED_KERNELS << " kernels to tune." << std::endl;
@@ -474,31 +468,9 @@ int main(int argc, char *argv[]) {
             auto *final_tuning_table = (double *) calloc(tuning_table_rows * tuning_table_columns,
                                                          sizeof(double)); // matrix
 
-
-#if DEBUG_MPI_OPERATIONS
-
-            print_matrix(final_tuning_table, tuning_table_rows, tuning_table_columns, true);
-    std::cout << "\n\n\n\n\n\n\n\n\n\n" ;
-
-#endif
-
             auto *local_tuning_table = (double *) calloc(tuning_table_rows * tuning_table_columns,
                                                          sizeof(double)); // matrix
 
-
-#if DEBUG_MPI_OPERATIONS
-
-
-            print_matrix(local_tuning_table, tuning_table_rows, tuning_table_columns, true);
-
-#endif
-
-
-            char kernel_type_final_table[tuning_table_rows];
-            memset(kernel_type_final_table, 'l', linear_rows);
-            memset(kernel_type_final_table + linear_rows, 'r', radial_rows);
-            memset(kernel_type_final_table + linear_rows + radial_rows, 's', sigmoid_rows);
-            memset(kernel_type_final_table + linear_rows + radial_rows + sigmoid_rows, 'p', polynomial_rows);
 
 
             // TODO: decide condition
@@ -546,7 +518,7 @@ int main(int argc, char *argv[]) {
                 if (process_rank == MASTER_PROCESS) {
                     std::cout << "Starting radial tuning" << std::endl;
                 }
-                tune_radial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,local_tuning_table, linear_rows * tuning_table_columns, tuning_table_columns, MASTER_PROCESS, world_size,lr,limit,eps,verbose);
+                //tune_radial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,local_tuning_table, linear_rows, tuning_table_columns, MASTER_PROCESS, world_size,lr,limit,eps,verbose);
                 std::cout << "Process " << process_rank << " has finished radial tuning" << std::endl;
                 //sigmoid
 
@@ -567,7 +539,7 @@ int main(int argc, char *argv[]) {
                 if (process_rank == MASTER_PROCESS) {
                     std::cout << "Starting sigmoid tuning" << std::endl;
                 }
-                // tune_sigmoid(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size, local_tuning_table, linear_rows * tuning_table_columns + radial_rows * tuning_table_columns, tuning_table_columns, MASTER_PROCESS, world_size);
+                tune_sigmoid(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size, local_tuning_table, linear_rows + radial_rows, tuning_table_columns, MASTER_PROCESS, world_size);
                 std::cout << "Process " << process_rank << " has finished sigmoid tuning" << std::endl;
                 //polynomial
 
@@ -588,7 +560,7 @@ int main(int argc, char *argv[]) {
                 if (process_rank == MASTER_PROCESS) {
                     std::cout << "Starting polynomial tuning" << std::endl;
                 }
-                // tune_polynomial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size,degree_array, degree_array_size, local_tuning_table, linear_rows * tuning_table_columns + radial_rows * tuning_table_columns +sigmoid_rows * tuning_table_columns , tuning_table_columns, MASTER_PROCESS, world_size);
+                //tune_polynomial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size,degree_array, degree_array_size, local_tuning_table, linear_rows + radial_rows +sigmoid_rows , tuning_table_columns, MASTER_PROCESS, world_size);
                 std::cout << "Process " << process_rank << " has finished polynomial tuning" << std::endl;
 
 #if PERFORMANCE_CHECK
@@ -624,9 +596,11 @@ int main(int argc, char *argv[]) {
                 ++time_iterator; // start calculating accuracy
 
 #endif
-#if DEBUG_MPI_OPERATIONS
+#if DEBUG_MAIN
+                if(process_rank == MASTER_PROCESS){
+                    print_matrix(final_tuning_table, tuning_table_rows, tuning_table_columns);
+                }
 
-                print_matrix(final_tuning_table, tuning_table_rows, tuning_table_columns);
 
 #endif
 
@@ -634,20 +608,35 @@ int main(int argc, char *argv[]) {
                 // together, will require a gather
             }
             if (process_rank == MASTER_PROCESS) {
-                double accuracies[tuning_table_rows];
+                // todo: revise selection logic
+                auto* accuracies = (double *) calloc(tuning_table_rows, sizeof(double ));
                 get_column(final_tuning_table, NUMBER_OF_HYPER_PARAMETERS, tuning_table_columns, tuning_table_rows,
                            accuracies);
                 auto *m = std::max_element(accuracies, accuracies + tuning_table_rows);
                 int row_index = (int) (m - accuracies);
                 double max_accuracy = *m;
                 std::cout << "Best Accuracy: " << max_accuracy << std::endl;
-                double best_row[tuning_table_columns];
+                auto* best_row = (double *) calloc(tuning_table_columns, sizeof(double ));
                 get_row(final_tuning_table, row_index, tuning_table_columns, best_row);
 
 
                 std::cout << "Best combination:\n\tKernel Cost Gamma Coef0 Degree Accuracy C1_Acc. C2_Acc."
                           << std::endl;
-                switch (kernel_type_final_table[row_index]) {
+
+                char out_kernel;
+
+                if(row_index < linear_rows){
+                    out_kernel = 'l';
+                } else if(row_index < linear_rows + radial_rows) {
+                    out_kernel = 'r';
+                } else if(row_index < linear_rows + radial_rows + sigmoid_rows ) {
+                    out_kernel = 's';
+                } else if(row_index < linear_rows + radial_rows + sigmoid_rows + polynomial_rows ){
+                    out_kernel = 'p';
+                } else {
+                    out_kernel = -1;
+                }
+                switch (out_kernel) {
                     case 'l': {
                         std::cout << "\tLinear ";
                         break;
@@ -664,10 +653,17 @@ int main(int argc, char *argv[]) {
                         std::cout << "\tPolynomial ";
                         break;
                     }
+                    default:{
+                        std::cout << "\tError from the code, contact the developer!";
+                        exit(2);
+                    }
 
                 }
                 print_vector(best_row, tuning_table_columns, false);
                 // todo: save data somewhere
+
+                free(best_row);
+                free(accuracies);
             }
 
             free(final_tuning_table);
