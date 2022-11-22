@@ -61,10 +61,9 @@ void tune_linear(Dataset *df_train,
 #if DEBUG_TUNE
         std::cout << "Process " << current_process << " training (radial) with cost " << params[0] << " and gamma " << params[1] << std::endl;
 #endif
-        train(*df_train, &svm, params, lr, limit,current_process,1,false,"",0,eps);
+        serial_train(*df_train, &svm, params, lr, limit,false,"",0,eps);
 
-
-        test(*df_validation, &svm, current_process,1);
+        serial_test(*df_validation, &svm);
 
         // TODO: debug
         result_table[index(offset + i, 0, result_table_columns)] = params[0];
@@ -145,12 +144,10 @@ void tune_radial(Dataset *df_train,
 #if DEBUG_TUNE
         std::cout << "Process " << current_process << " training (radial) with cost " << params[0] << " and gamma " << params[1] << std::endl;
 #endif
-        train(*df_train, &svm, params, lr, limit,current_process,1,false,"",0,eps);
+        serial_train(*df_train, &svm, params, lr, limit,false,"",0,eps);
 
+        serial_test(*df_validation, &svm);
 
-        test(*df_validation, &svm, current_process,1);
-
-        // TODO: debug
         result_table[index(offset + i, 0, result_table_columns)] = params[0];
         result_table[index(offset + i , 1, result_table_columns)] = params[1];
         result_table[index(offset + i , 2, result_table_columns)] = params[2];
@@ -226,10 +223,9 @@ void tune_sigmoid(Dataset *df_train,
 #if DEBUG_TUNE
         std::cout << "Process " << current_process << " training (sigmoid) with cost " << params[0] << " , gamma " << params[1] << " and intercept " << params[2] << std::endl;
 #endif
-        train(*df_train, &svm, params, lr, limit,current_process,1,false,"",0,eps);
+        serial_train(*df_train, &svm, params, lr, limit,false,"",0,eps);
 
-
-        test(*df_validation, &svm, current_process,1);
+        serial_test(*df_validation, &svm);
 
         // TODO: debug
         result_table[index(offset + i, 0, result_table_columns)] = params[0];
@@ -312,10 +308,9 @@ void tune_polynomial(Dataset *df_train,
 #if DEBUG_TUNE
         std::cout << "Process " << current_process << " training (polynomial) with cost " << params[0] << " , gamma " << params[1] << ", intercept " << params[2]  << " and degree " << params[3] << std::endl;
 #endif
-        train(*df_train, &svm, params, lr, limit,current_process,1,false,"",0,eps);
+        serial_train(*df_train, &svm, params, lr, limit,false,"",0,eps);
 
-
-        test(*df_validation, &svm, current_process,1);
+        serial_test(*df_validation, &svm);
 
         // TODO: debug
         result_table[index(offset + i, 0, result_table_columns)] = params[0];

@@ -139,14 +139,14 @@ int main(int argc, char *argv[]) {
      */
 
 
-    flag = tuning;
+    flag = training;
 
 
 
-    // std::string filepath_training = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
-    std::string filepath_training = "/Users/azel/Developer/hpc2022/data/iris_train.csv";
-    std::string filepath_validation = "/Users/azel/Developer/hpc2022/data/iris_validation.csv";
-    // std::string filepath_validation = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_validation.csv";
+    std::string filepath_training = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
+    //std::string filepath_training = "/Users/azel/Developer/hpc2022/data/iris_train.csv";
+    //std::string filepath_validation = "/Users/azel/Developer/hpc2022/data/iris_validation.csv";
+    std::string filepath_validation = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_validation.csv";
     std::string filepath_hyper_parameters = "../data/hyperparameters.csv"; // TODO: implement
     std::string filepath_svm = "/Users/azel/Developer/hpc2022/saved_svm/radialr_C0.100000_G1.000000.svm";
     size_t rows_t = 70, rows_v = 30, columns = 5, target_column = 5;
@@ -154,7 +154,8 @@ int main(int argc, char *argv[]) {
 
     bool verbose = false;
 
-    std::string save_dir_path = "/Users/azel/Developer/hpc2022/saved_svm/";
+    //std::string save_dir_path = "/Users/azel/Developer/hpc2022/saved_svm/";
+    std::string save_dir_path = "/home/dmmp/Documents/GitHub/hpc2022/saved_svm";
 
     double Cost = 5;
     double gamma = 0.1;
@@ -243,7 +244,6 @@ int main(int argc, char *argv[]) {
 
 #endif
 
-            // TODO: change to parallel logic
 
             Kernel_SVM svm;
 
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 
-            train(df_train, &svm, params, lr, limit,MASTER_PROCESS, world_size, true, save_dir_path, 0, eps);
+            parallel_train(df_train, &svm, params, lr, limit,MASTER_PROCESS, world_size, true, save_dir_path, 0, eps);
 
 #if PERFORMANCE_CHECK
 
@@ -315,7 +315,7 @@ int main(int argc, char *argv[]) {
 
             svm.verbose = true;
 
-            test(df_test, &svm, MASTER_PROCESS, world_size);
+            parallel_test(df_test, &svm, MASTER_PROCESS, world_size);
 
             break;
 
@@ -511,7 +511,7 @@ int main(int argc, char *argv[]) {
                 if (process_rank == MASTER_PROCESS) {
                     std::cout << "Starting radial tuning" << std::endl;
                 }
-                //tune_radial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,local_tuning_table, linear_rows, tuning_table_columns, MASTER_PROCESS, world_size,lr,limit,eps,verbose);
+                tune_radial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,local_tuning_table, linear_rows, tuning_table_columns, MASTER_PROCESS, world_size,lr,limit,eps,verbose);
                 std::cout << "Process " << process_rank << " has finished radial tuning" << std::endl;
                 //sigmoid
 
@@ -532,7 +532,7 @@ int main(int argc, char *argv[]) {
                 if (process_rank == MASTER_PROCESS) {
                     std::cout << "Starting sigmoid tuning" << std::endl;
                 }
-                tune_sigmoid(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size, local_tuning_table, linear_rows + radial_rows, tuning_table_columns, MASTER_PROCESS, world_size);
+                //tune_sigmoid(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size, local_tuning_table, linear_rows + radial_rows, tuning_table_columns, MASTER_PROCESS, world_size);
                 std::cout << "Process " << process_rank << " has finished sigmoid tuning" << std::endl;
                 //polynomial
 
