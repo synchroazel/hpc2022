@@ -9,7 +9,7 @@
 
 #define DEBUG_SUPPORT_VECTORS false
 #define MASTER_PROCESS 0
-#define DEBUG_TRAIN true
+#define DEBUG_TRAIN false
 
 /**
  * Linear kernel function
@@ -110,19 +110,19 @@ double kernel::sigmoid(const double *x1,
 }
 
 /**
- * Training function
+ * Serial Training function
  */
 
 // training data must have only two classes
 void serial_train(const Dataset &training_data,
-           Kernel_SVM *svm,
-           double hyper_parameters[4],
-           const double lr,
-           const double limit,
-           bool save_svm_flag = true,
-           const std::string& svm_save_dir_path = "",
-           size_t class_1 = 0,
-           const double eps = 0.0000001
+                  Kernel_SVM *svm,
+                  double hyper_parameters[4],
+                  const double lr,
+                  const double limit,
+                  bool save_svm_flag = true,
+                  const std::string &svm_save_dir_path = "",
+                  size_t class_1 = 0,
+                  const double eps = 0.0000001
 
 ) {
 
@@ -177,7 +177,6 @@ void serial_train(const Dataset &training_data,
     if (svm->verbose) {
         std::cout << "\n┌────────────────────── Training ───────────────────────┐" << std::endl;
     }
-
 
 
     do {
@@ -472,8 +471,8 @@ void serial_train(const Dataset &training_data,
  */
 
 void serial_test(Dataset test_data,
-          Kernel_SVM *svm,
-          size_t class_1 = 0) {
+                 Kernel_SVM *svm,
+                 size_t class_1 = 0) {
 
     // split all training data into class1 and class2 data
 
@@ -522,19 +521,21 @@ void serial_test(Dataset test_data,
     svm->accuracy_c1 = (double) svm->correct_c1 / (double) c1;
     svm->accuracy_c2 = (double) svm->correct_c2 / (double) c2;
 
-    if(svm->verbose){
+    if (svm->verbose) {
         std::cout << "\n┌────────────── Test Results ───────────────┐" << std::endl;
 
-        std::cout << "Cost: " << svm->params[0] << " | Gamma: " << svm->params[1] << " | Coef0: " << svm->params[2] << " | Degree: " << svm->params[3] << std::endl;
+        std::cout << "Cost: " << svm->params[0] << " | Gamma: " << svm->params[1] << " | Coef0: " << svm->params[2]
+                  << " | Degree: " << svm->params[3] << std::endl;
         std::cout << "  accuracy-all:\t\t" << std::setprecision(6) << svm->accuracy << " ("
                   << svm->correct_c1 + svm->correct_c2 << "/" << c1 + c2 << " hits)" << std::endl;
-        std::cout << "  accuracy-class1:\t" << std::setprecision(6) << svm->accuracy_c1 << " (" << svm->correct_c1 << "/"
+        std::cout << "  accuracy-class1:\t" << std::setprecision(6) << svm->accuracy_c1 << " (" << svm->correct_c1
+                  << "/"
                   << c1 << " hits)" << std::endl;
-        std::cout << "  accuracy-class2:\t" << std::setprecision(6) << svm->accuracy_c2 << " (" << svm->correct_c2 << "/"
+        std::cout << "  accuracy-class2:\t" << std::setprecision(6) << svm->accuracy_c2 << " (" << svm->correct_c2
+                  << "/"
                   << c2 << " hits)" << std::endl;
         std::cout << "└───────────────────────────────────────────┘" << std::endl;
     }
-
 
 
     free(class1_data);
@@ -545,30 +546,34 @@ void serial_test(Dataset test_data,
 
 
 /**
- * parallel Training function
+ * Parallel Training function
  */
 
 // training data must have only two classes
 void parallel_train(const Dataset &training_data,
-           Kernel_SVM *svm,
-           double hyper_parameters[4],
-           const double lr,
-           const double limit,
-           int process_offset,
-           int available_processes,
-           bool save_svm_flag = true,
-           const std::string &svm_save_dir_path = "",
-           size_t class_1 = 0,
-           const double eps = 0.0000001
+                    Kernel_SVM *svm,
+                    double hyper_parameters[4],
+                    const double lr,
+                    const double limit,
+                    int process_offset,
+                    int available_processes,
+                    bool save_svm_flag = true,
+                    const std::string &svm_save_dir_path = "",
+                    size_t class_1 = 0,
+                    const double eps = 0.0000001
 ) {
 
 
     // Get the rank of the process
     int current_process;
     MPI_Comm_rank(MPI_COMM_WORLD, &current_process);
-    int iters_per_process = (int)(ceil((double)(training_data.rows_number) / (double)(available_processes)));
+    int iters_per_process = (int) (ceil((double) (training_data.rows_number) / (double) (available_processes)));
 #if DEBUG_TRAIN
-    std::cout << "Iters per process: " << iters_per_process << std::endl;
+    if (current_process == process_offset) {
+        std::cout << "Number of rows: " << training_data.rows_number << std::endl;
+        std::cout << "Number of processes: " << available_processes << std::endl;
+        std::cout << "Iters per process: " << iters_per_process << std::endl;
+    }
 #endif
 
 
@@ -585,9 +590,9 @@ void parallel_train(const Dataset &training_data,
     //TODO: all checks
     int control = 0; // used for checks
 
-    int start= (current_process - process_offset) * iters_per_process;
+    int start = (current_process - process_offset) * iters_per_process;
     int end = start + iters_per_process;
-    for (i=start; i < end; i++) {
+    for (i = start; i < end; i++) {
 
         // look at y
         if (training_data.class_vector[i] == training_data.unique_classes[class_1]) { // if first class record
@@ -600,14 +605,14 @@ void parallel_train(const Dataset &training_data,
     }
 
     size_t N;
-    N = i; // number of rows
+    // N = i; // number of rows
+    N = training_data.rows_number;
 
     i = 0; // i will be useful later
     size_t j;
 
     bool judge;
-    double item1, item2, item3;
-    double item3_local = 0.0;
+    double item1 = 0, item2 = 0, item3 = 0;
     double alpha[N];
     memset(alpha, 0, N * sizeof(double));
     double delta;
@@ -632,40 +637,46 @@ void parallel_train(const Dataset &training_data,
     }
 
 
-    /* TODO: parallelize this */
     /* ----------------------------------------------------------------------------- */
 
+
+    double item1_local;
+    double item2_local;
+    double item3_local;
+
+    // std::cout << "current process: " << current_process << " process offset: " << process_offset << " N: " << N << std::endl;
 
     do {
 
         judge = false;
         error = 0.0;
 
-
-
         // update Alpha
-        for (i = (current_process -  process_offset) * iters_per_process;
-            i < (((current_process -  process_offset) * iters_per_process) + iters_per_process);
-            i++) {
+        for (i = (current_process - process_offset) * iters_per_process;
+             (i < (((current_process - process_offset) * iters_per_process) + iters_per_process));
+             i++) {
 
-            double local_delta = 0.0;
-
-            item1 = 0;
-            for (j = 0; j < N; j++) {
+            item1_local = 0;
+            for (j = 0; j < N; j++) {  // OMP?
                 get_row(training_data, i, false, xi);
                 get_row(training_data, j, false, xj);
-                item1 += local_alpha[j] * (double) y[i] * (double) y[j] *
-                         svm->K(xi, xj, training_data.predictors_column_number, hyper_parameters);
+                item1_local += local_alpha[j] * (double) y[i] * (double) y[j] *
+                               svm->K(xi, xj, training_data.predictors_column_number, hyper_parameters);
             }
 
-            item2 = 0;
-            for (j = 0; j < N; j++) {
-                item2 += local_alpha[j] * (double) y[i] * (double) y[j];
+            MPI_Allreduce(&item1_local, &item1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+            item2_local = 0;
+            for (j = 0; j < N; j++) {  // OMP?
+                item2_local += local_alpha[j] * (double) y[i] * (double) y[j];
             }
 
-            local_delta = 1.0 - item1 - beta * item2;
+            MPI_Allreduce(&item2_local, &item2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-            local_alpha[i] += lr * local_delta;
+            delta = 1.0 - item1 - beta * item2;
+
+            local_alpha[i] += lr * delta;
+
             if (local_alpha[i] < 0.0) {
                 local_alpha[i] = 0.0;
             } else if (local_alpha[i] > hyper_parameters[0]/*Cost*/) {
@@ -675,13 +686,21 @@ void parallel_train(const Dataset &training_data,
                 error += std::abs(delta) - limit;
             }
 
-
         }
 
+//        /* to visually inspect local alphas before allreduce */
+//        std::cout << "\nlocal alpha on process " << current_process << ": " << std::endl;
+//        for (int k = 0; k < sizeof(local_alpha) / sizeof(double); k++) {
+//            std::cout << local_alpha[k] << " ";
+//        } std::cout << std::endl;
 
+        MPI_Allreduce(&local_alpha, &alpha, N, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-
-        // justify the use of Reduce
+        if (current_process == MASTER_PROCESS) {
+            std::cout << "\n" << std::endl;
+        }
+        std::cout << "|- alpha on process " << current_process << " has length " << sizeof(alpha) / sizeof(double)
+                  << std::endl;
 
         // update bias Beta
         item3_local = 0.0;
@@ -692,8 +711,6 @@ void parallel_train(const Dataset &training_data,
             // like before
         }
 
-        // reduce all item3 with sum
-        //double item3_sum;
         MPI_Allreduce(&item3_local, &item3, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         beta += item3 * item3 / 2.0;
@@ -947,10 +964,10 @@ void parallel_train(const Dataset &training_data,
  */
 
 void parallel_test(Dataset test_data,
-          Kernel_SVM *svm,
-          int process_offset,
-          int available_processes,
-          size_t class_1 = 0) {
+                   Kernel_SVM *svm,
+                   int process_offset,
+                   int available_processes,
+                   size_t class_1 = 0) {
 
     // todo: implement parallel logic
 
@@ -962,74 +979,74 @@ void parallel_test(Dataset test_data,
     //if (process_rank == process_offset) {
 
 
-        auto *class1_data = (double *) calloc(test_data.rows_number * test_data.predictors_column_number,
-                                              sizeof(double));
-        auto *class2_data = (double *) calloc(test_data.rows_number * test_data.predictors_column_number,
-                                              sizeof(double));
+    auto *class1_data = (double *) calloc(test_data.rows_number * test_data.predictors_column_number,
+                                          sizeof(double));
+    auto *class2_data = (double *) calloc(test_data.rows_number * test_data.predictors_column_number,
+                                          sizeof(double));
 
-        auto *cur_row = (double *) calloc(test_data.predictors_column_number, sizeof(double));
-        size_t c1 = 0, c2 = 0;
+    auto *cur_row = (double *) calloc(test_data.predictors_column_number, sizeof(double));
+    size_t c1 = 0, c2 = 0;
 
-        for (size_t i = 0; i < test_data.rows_number; i++) {
+    for (size_t i = 0; i < test_data.rows_number; i++) {
 
-            get_row(test_data, i, false, cur_row);
+        get_row(test_data, i, false, cur_row);
 
-            if (test_data.class_vector[i] == test_data.unique_classes[class_1]) {
-                memcpy(class1_data + (c1 * test_data.predictors_column_number), cur_row,
-                       test_data.predictors_column_number * sizeof(double));
-                ++c1;
-            } else {
-                memcpy(class2_data + (c2 * test_data.predictors_column_number), cur_row,
-                       test_data.predictors_column_number * sizeof(double));
-                ++c2;
-            }
+        if (test_data.class_vector[i] == test_data.unique_classes[class_1]) {
+            memcpy(class1_data + (c1 * test_data.predictors_column_number), cur_row,
+                   test_data.predictors_column_number * sizeof(double));
+            ++c1;
+        } else {
+            memcpy(class2_data + (c2 * test_data.predictors_column_number), cur_row,
+                   test_data.predictors_column_number * sizeof(double));
+            ++c2;
         }
+    }
 
-        size_t i;
-        int result = 0;
+    size_t i;
+    int result = 0;
 
-        svm->correct_c1 = 0;
-        for (i = 0; i < c1; i++) {
-            result = (int) g(svm, class1_data + index(i, 0, test_data.predictors_column_number));
-            if (result == -1) {
-                ++svm->correct_c1;
-            }
+    svm->correct_c1 = 0;
+    for (i = 0; i < c1; i++) {
+        result = (int) g(svm, class1_data + index(i, 0, test_data.predictors_column_number));
+        if (result == -1) {
+            ++svm->correct_c1;
         }
+    }
 
-        svm->correct_c2 = 0;
-        for (i = 0; i < c1; i++) {
-            result = (int) g(svm, class2_data + index(i, 0, test_data.predictors_column_number));
-            if (result == 1) {
-                ++svm->correct_c2;
-            }
+    svm->correct_c2 = 0;
+    for (i = 0; i < c1; i++) {
+        result = (int) g(svm, class2_data + index(i, 0, test_data.predictors_column_number));
+        if (result == 1) {
+            ++svm->correct_c2;
         }
+    }
 
-        svm->accuracy =
-                (double) (svm->correct_c1 + svm->correct_c2) / (double) (c1 + c2);
-        svm->accuracy_c1 = (double) svm->correct_c1 / (double) c1;
-        svm->accuracy_c2 = (double) svm->correct_c2 / (double) c2;
+    svm->accuracy =
+            (double) (svm->correct_c1 + svm->correct_c2) / (double) (c1 + c2);
+    svm->accuracy_c1 = (double) svm->correct_c1 / (double) c1;
+    svm->accuracy_c2 = (double) svm->correct_c2 / (double) c2;
 
-        if (svm->verbose) {
-            std::cout << "\n┌───────────────── Test Results ──────────────────┐" << std::endl;
+    if (svm->verbose) {
+        std::cout << "\n┌───────────────── Test Results ──────────────────┐" << std::endl;
 
-            std::cout << "  Cost: " << svm->params[0] << " | Gamma: " << svm->params[1] << " | Coef0: "
-                      << svm->params[2] << " | Degree: " << svm->params[3] << std::endl;
-            std::cout << "  accuracy-all:\t\t" << std::setprecision(6) << svm->accuracy << " ("
-                      << svm->correct_c1 + svm->correct_c2 << "/" << c1 + c2 << " hits)" << std::endl;
-            std::cout << "  accuracy-class1:\t" << std::setprecision(6) << svm->accuracy_c1 << " (" << svm->correct_c1
-                      << "/"
-                      << c1 << " hits)" << std::endl;
-            std::cout << "  accuracy-class2:\t" << std::setprecision(6) << svm->accuracy_c2 << " (" << svm->correct_c2
-                      << "/"
-                      << c2 << " hits)" << std::endl;
-            std::cout << "└─────────────────────────────────────────────────┘\n" << std::endl;
-        }
+        std::cout << "  Cost: " << svm->params[0] << " | Gamma: " << svm->params[1] << " | Coef0: "
+                  << svm->params[2] << " | Degree: " << svm->params[3] << std::endl;
+        std::cout << "  accuracy-all:\t\t" << std::setprecision(6) << svm->accuracy << " ("
+                  << svm->correct_c1 + svm->correct_c2 << "/" << c1 + c2 << " hits)" << std::endl;
+        std::cout << "  accuracy-class1:\t" << std::setprecision(6) << svm->accuracy_c1 << " (" << svm->correct_c1
+                  << "/"
+                  << c1 << " hits)" << std::endl;
+        std::cout << "  accuracy-class2:\t" << std::setprecision(6) << svm->accuracy_c2 << " (" << svm->correct_c2
+                  << "/"
+                  << c2 << " hits)" << std::endl;
+        std::cout << "└─────────────────────────────────────────────────┘\n" << std::endl;
+    }
 
-        free(class1_data);
-        free(class2_data);
-        free(cur_row);
+    free(class1_data);
+    free(class2_data);
+    free(cur_row);
 
-   // }
+    // }
 
 }
 
