@@ -45,10 +45,7 @@ typedef struct Kernel_SVM {
     // stored for serialization
     size_t arr_xs_row_size{};
     size_t arr_xs_column_size{};
-    //size_t arr_alpha_size{};
     size_t arr_xs_in_row_size{};
-    //size_t arr_xs_in_column_size{};
-    size_t arr_alpha_in_size{};
 
     double *arr_xs{};  // matrix
     int *arr_ys{};
@@ -114,10 +111,7 @@ int save_svm(const Kernel_SVM *svm, const std::string &path) {
     // write sizes
     fwrite(&svm->arr_xs_row_size, sizeof(size_t), 1, file_to_write);
     fwrite(&svm->arr_xs_column_size, sizeof(size_t), 1, file_to_write);
-    //fwrite(&svm->arr_alpha_size, sizeof(size_t), 1, file_to_write);
     fwrite(&svm->arr_xs_in_row_size, sizeof(size_t), 1, file_to_write);
-    //fwrite(&svm->arr_xs_in_column_size, sizeof(size_t), 1, file_to_write);
-    fwrite(&svm->arr_alpha_in_size, sizeof(size_t), 1, file_to_write);
 
     // writing vectors
     fwrite(svm->arr_xs, sizeof(double) * svm->arr_xs_row_size * svm->arr_xs_column_size, 1, file_to_write);
@@ -125,7 +119,7 @@ int save_svm(const Kernel_SVM *svm, const std::string &path) {
     fwrite(svm->arr_alpha_s, sizeof(double) * svm->arr_xs_row_size, 1, file_to_write);
     fwrite(svm->arr_xs_in, sizeof(double) * svm->arr_xs_in_row_size * svm->arr_xs_column_size, 1, file_to_write);
     fwrite(svm->arr_ys_in, sizeof(int) * svm->arr_xs_in_row_size, 1, file_to_write);
-    fwrite(svm->arr_alpha_s_in, sizeof(double) * svm->arr_alpha_in_size, 1, file_to_write);
+    fwrite(svm->arr_alpha_s_in, sizeof(double) * svm->arr_xs_in_row_size, 1, file_to_write);
 
     // b
     fwrite(&svm->b, sizeof(double), 1, file_to_write);
@@ -165,27 +159,25 @@ int read_svm(Kernel_SVM *svm, const std::string &path) {
     // read sizes
     fread(&svm->arr_xs_row_size, sizeof(size_t), 1, file_to_read);
     fread(&svm->arr_xs_column_size, sizeof(size_t), 1, file_to_read);
-    //fread(&svm->arr_alpha_size, sizeof(size_t), 1, file_to_read);
     fread(&svm->arr_xs_in_row_size, sizeof(size_t), 1, file_to_read);
-    //fread(&svm->arr_xs_in_column_size, sizeof(size_t), 1, file_to_read);
-    fread(&svm->arr_alpha_in_size, sizeof(size_t), 1, file_to_read);
 
     svm->arr_xs = (double *) malloc(svm->arr_xs_row_size * svm->arr_xs_column_size * sizeof(double));
     svm->arr_ys = (int *) malloc(svm->arr_xs_row_size * sizeof(int));
     svm->arr_alpha_s = (double *) malloc(svm->arr_xs_row_size * sizeof(double));
     svm->arr_xs_in = (double *) malloc(svm->arr_xs_in_row_size * svm->arr_xs_column_size * sizeof(double));
     svm->arr_ys_in = (int *) malloc(svm->arr_xs_in_row_size * sizeof(int));
-    svm->arr_alpha_s_in = (double *) malloc(svm->arr_alpha_in_size * sizeof(double));
+    svm->arr_alpha_s_in = (double *) malloc(svm->arr_xs_in_row_size * sizeof(double));
 
     fread(svm->arr_xs, sizeof(double) * svm->arr_xs_row_size * svm->arr_xs_column_size, 1, file_to_read);
     fread(svm->arr_ys, sizeof(int) * svm->arr_xs_row_size, 1, file_to_read);
     fread(svm->arr_alpha_s, sizeof(double) * svm->arr_xs_row_size, 1, file_to_read);
     fread(svm->arr_xs_in, sizeof(double) * svm->arr_xs_in_row_size * svm->arr_xs_column_size, 1, file_to_read);
     fread(svm->arr_ys_in, sizeof(int) * svm->arr_xs_in_row_size, 1, file_to_read);
-    fread(svm->arr_alpha_s_in, sizeof(double) * svm->arr_alpha_in_size, 1, file_to_read);
+    fread(svm->arr_alpha_s_in, sizeof(double) * svm->arr_xs_in_row_size, 1, file_to_read);
 
     // b
     fread(&svm->b, sizeof(double), 1, file_to_read);
+
     //accuracies
     fread(&svm->accuracy, sizeof(double), 1, file_to_read);
     fread(&svm->accuracy_c1, sizeof(double), 1, file_to_read);

@@ -122,9 +122,7 @@ void serial_train(const Dataset &training_data,
                   bool save_svm_flag = true,
                   const std::string &svm_save_dir_path = "",
                   size_t class_1 = 0,
-                  const double eps = 0.0000001
-
-) {
+                  const double eps = 0.0000001) {
 
 
     svm->params[0] = hyper_parameters[0];
@@ -253,15 +251,12 @@ void serial_train(const Dataset &training_data,
 
     svm->arr_xs_row_size = 0;
     svm->arr_xs_column_size = training_data.predictors_column_number;
-    //svm->arr_alpha_size = 0;
 
     svm->arr_xs_in = (double *) calloc(N * training_data.predictors_column_number, sizeof(double)); // matrix
     svm->arr_ys_in = (int *) calloc(N, sizeof(int));
     svm->arr_alpha_s_in = (double *) calloc(N, sizeof(double));
 
     svm->arr_xs_in_row_size = 0;
-    //svm->arr_xs_in_column_size = training_data.predictors_column_number;
-    svm->arr_alpha_in_size = 0;
 
     int sv = 0, svi = 0;
     for (i = 0; i < N; i++) {
@@ -275,7 +270,6 @@ void serial_train(const Dataset &training_data,
             *(svm->arr_ys + sv) = y[i];
 
             *(svm->arr_alpha_s + sv) = alpha[i];
-            //++svm->arr_alpha_size;
 
             ++sv;
 
@@ -289,7 +283,6 @@ void serial_train(const Dataset &training_data,
             *(svm->arr_ys_in + svi) = y[i];
 
             *(svm->arr_alpha_s_in + svi) = alpha[i];
-            ++svm->arr_alpha_in_size;
 
             ++svi;
         }
@@ -324,15 +317,17 @@ void serial_train(const Dataset &training_data,
 //    svm->arr_xs = (double *) reallocarray(svm->arr_xs, svm->arr_xs_row_size * svm->arr_xs_column_size, sizeof (double ));
 //    svm->arr_ys = (int *) reallocarray(svm->arr_ys, svm->arr_xs_row_size, sizeof (int));
 //    svm->arr_alpha_s = (double *) reallocarray(svm->arr_alpha_s, svm->arr_alpha_size, sizeof (double ));
-//
 //    svm->arr_xs_in = (double *) reallocarray(svm->arr_xs_in, svm->arr_xs_in_row_size * svm->arr_xs_in_column_size, sizeof (double ));
 //    svm->arr_ys_in = (int *) reallocarray(svm->arr_ys_in, svm->arr_xs_in_row_size, sizeof (int));
 //    svm->arr_alpha_s_in = (double *) reallocarray(svm->arr_alpha_s_in, svm->arr_alpha_in_size, sizeof (double ));
 
     svm->arr_xs = (double *) realloc(svm->arr_xs, svm->arr_xs_row_size * svm->arr_xs_column_size * sizeof(double));
     svm->arr_ys = (int *) realloc(svm->arr_ys, svm->arr_xs_row_size * sizeof(int));
+    svm->arr_alpha_s = (double *) realloc(svm->arr_alpha_s, svm->arr_xs_row_size * sizeof(double));
+    svm->arr_xs_in = (double *) realloc(svm->arr_xs_in,
+                                        svm->arr_xs_in_row_size * svm->arr_xs_column_size * sizeof(double));
     svm->arr_ys_in = (int *) realloc(svm->arr_ys_in, svm->arr_xs_in_row_size * sizeof(int));
-    svm->arr_alpha_s_in = (double *) realloc(svm->arr_alpha_s_in, svm->arr_alpha_in_size * sizeof(double));
+    svm->arr_alpha_s_in = (double *) realloc(svm->arr_alpha_s_in, svm->arr_xs_in_row_size * sizeof(double));
 
     // Update the bias
     svm->b = 0.0;
@@ -467,7 +462,7 @@ void serial_train(const Dataset &training_data,
 
 
 /**
- * Testing function
+ * Serial testing function
  */
 
 void serial_test(Dataset test_data,
@@ -560,8 +555,7 @@ void parallel_train(const Dataset &training_data,
                     bool save_svm_flag = true,
                     const std::string &svm_save_dir_path = "",
                     size_t class_1 = 0,
-                    const double eps = 0.0000001
-) {
+                    const double eps = 0.0000001) {
 
 
     // Get the rank of the process
@@ -652,9 +646,7 @@ void parallel_train(const Dataset &training_data,
         error = 0.0;
 
         // update Alpha
-        for (i = (current_process - process_offset) * iters_per_process;
-             (i < (((current_process - process_offset) * iters_per_process) + iters_per_process));
-             i++) {
+        for (i = start; (i < end) && (i < N); i++) {
 
             item1_local = 0;
             for (j = 0; j < N; j++) {  // OMP?
@@ -688,27 +680,26 @@ void parallel_train(const Dataset &training_data,
 
         }
 
-//        /* to visually inspect local alphas before allreduce */
-//        std::cout << "\nlocal alpha on process " << current_process << ": " << std::endl;
-//        for (int k = 0; k < sizeof(local_alpha) / sizeof(double); k++) {
-//            std::cout << local_alpha[k] << " ";
-//        } std::cout << std::endl;
+#if DEBUG_TRAIN
+        std::cout << "\nlocal alpha on process " << current_process << ": " << std::endl;
+        for (int k = 0; k < sizeof(local_alpha) / sizeof(double); k++) {
+            std::cout << local_alpha[k] << " ";
+        } std::cout << std::endl;
+#endif
 
         MPI_Allreduce(&local_alpha, &alpha, N, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
+#if DEBUG_TRAIN
         if (current_process == MASTER_PROCESS) {
             std::cout << "\n" << std::endl;
         }
-        std::cout << "|- alpha on process " << current_process << " has length " << sizeof(alpha) / sizeof(double)
-                  << std::endl;
+        std::cout << "alpha on process " << current_process << " has length " << sizeof(alpha) / sizeof(double) << std::endl;
+#endif
 
         // update bias Beta
         item3_local = 0.0;
-        for (i = (current_process - process_offset) * iters_per_process;
-             i < (((current_process - process_offset) * iters_per_process) + iters_per_process);
-             i++) {
+        for (i = start; (i < end) && (i < N); i++) {
             item3_local += alpha[i] * (double) y[i];
-            // like before
         }
 
         MPI_Allreduce(&item3_local, &item3, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -727,63 +718,82 @@ void parallel_train(const Dataset &training_data,
     /* ----------------------------------------------------------------------------- */
 
 
-    // Reduce alpha
-
-    if (svm->verbose) {
-        std::cout << "\n├───────────────────────────────────────────────────────┤" << std::endl;
-    }
+    if (svm->verbose) { std::cout << "\n├───────────────────────────────────────────────────────┤" << std::endl; }
 
     // initialize, then realloc
     // NB: N are the rows of the new matrix
     // need to check for memory leaks, we will try another approach in the meanwhile
 
-    svm->arr_xs = (double *) calloc(N * training_data.predictors_column_number, sizeof(double)); // matrix
-    svm->arr_ys = (int *) calloc(N, sizeof(int));
-    svm->arr_alpha_s = (double *) calloc(N, sizeof(double));
+    auto *local_arr_xs = (double *) calloc(iters_per_process * training_data.predictors_column_number, sizeof(double));
+    auto *local_arr_ys = (int *) calloc(iters_per_process, sizeof(int));
+    auto *local_arr_alpha_s = (double *) calloc(iters_per_process, sizeof(double));
+    int local_arr_xs_row_size = 0; //
+    auto *local_arr_xs_in = (double *) calloc(iters_per_process * training_data.predictors_column_number,sizeof(double));
+    auto *local_arr_ys_in = (int *) calloc(iters_per_process, sizeof(int));
+    auto *local_arr_alpha_s_in = (double *) calloc(iters_per_process, sizeof(double));
+    int local_arr_xs_in_row_size = 0; //
 
-    svm->arr_xs_row_size = 0;
-    svm->arr_xs_column_size = training_data.predictors_column_number;
-    //svm->arr_alpha_size = 0;
+    int *local_xs_sizes = (int *) calloc(iters_per_process, sizeof(int));
+    int *local_xs_in_sizes = (int *) calloc(iters_per_process, sizeof(int));
 
-    svm->arr_xs_in = (double *) calloc(N * training_data.predictors_column_number, sizeof(double)); // matrix
-    svm->arr_ys_in = (int *) calloc(N, sizeof(int));
-    svm->arr_alpha_s_in = (double *) calloc(N, sizeof(double));
+    //int sv = 0, svi = 0;
 
-    svm->arr_xs_in_row_size = 0;
-    //svm->arr_xs_in_column_size = training_data.predictors_column_number;
-    svm->arr_alpha_in_size = 0;
+    for (i = start; (i < end) && (i < N); i++) {
 
-    int sv = 0, svi = 0;
-    for (i = 0; i < N; i++) {
         if ((eps < alpha[i]) && (alpha[i] < hyper_parameters[0]/*cost*/ - eps)) {
             // support vectors outside the margin
             get_row(training_data, i, false, xi);
-            memcpy(svm->arr_xs + index(sv, 0, training_data.predictors_column_number), xi,
+            memcpy(local_arr_xs + index(local_arr_xs_row_size, 0, training_data.predictors_column_number), xi,
                    training_data.predictors_column_number * sizeof(double));
-            ++svm->arr_xs_row_size;
+            ++local_arr_xs_row_size;
 
-            *(svm->arr_ys + sv) = y[i];
+            *(local_arr_ys + local_arr_xs_row_size) = y[i];
 
-            *(svm->arr_alpha_s + sv) = alpha[i];
-            //++svm->arr_alpha_size;
+            *(local_arr_alpha_s + local_arr_xs_row_size) = alpha[i];
 
-            ++sv;
+            //++sv;
 
         } else if (alpha[i] >= hyper_parameters[0]/*cost*/ - eps) {
             // support vectors inside the margin
             get_row(training_data, i, false, xi);
-            memcpy(svm->arr_xs_in + index(svi, 0, training_data.predictors_column_number), xi,
+            memcpy(local_arr_xs_in + index(local_arr_xs_in_row_size, 0, training_data.predictors_column_number), xi,
                    training_data.predictors_column_number * sizeof(double));
-            ++svm->arr_xs_in_row_size;
+            ++local_arr_xs_in_row_size;
 
-            *(svm->arr_ys_in + svi) = y[i];
+            *(local_arr_ys_in + local_arr_xs_in_row_size) = y[i];
 
-            *(svm->arr_alpha_s_in + svi) = alpha[i];
-            ++svm->arr_alpha_in_size;
+            *(local_arr_alpha_s_in + local_arr_xs_in_row_size) = alpha[i];
 
-            ++svi;
+            //++svi;
         }
     }
+
+    local_xs_sizes[current_process] = local_arr_xs_row_size;
+    local_xs_in_sizes[current_process] = local_arr_xs_row_size;
+
+    MPI_Reduce(&local_arr_xs_row_size, &svm->arr_xs_row_size, 1, MPI_INT, MPI_SUM, process_offset, MPI_COMM_WORLD);
+    MPI_Reduce(&local_arr_xs_in_row_size, &svm->arr_xs_in_row_size, 1, MPI_INT, MPI_SUM, process_offset, MPI_COMM_WORLD);
+
+    if (current_process == process_offset) {
+        svm->arr_xs = (double *) calloc(svm->arr_xs_row_size * training_data.predictors_column_number, sizeof(double));
+        svm->arr_ys = (int *) calloc(svm->arr_xs_row_size, sizeof(int));
+        svm->arr_alpha_s = (double *) calloc(svm->arr_xs_row_size, sizeof(double));
+        svm->arr_xs_in = (double *) calloc(svm->arr_xs_in_row_size * training_data.predictors_column_number,sizeof(double));
+        svm->arr_ys_in = (int *) calloc(svm->arr_xs_in_row_size, sizeof(int));
+        svm->arr_alpha_s_in = (double *) calloc(svm->arr_xs_in_row_size, sizeof(double));
+    }
+
+    // TODO : implement a gather for all_sizes, and check the below
+
+//    svm->arr_xs = (double *) calloc(N * training_data.predictors_column_number, sizeof(double)); // matrix
+//    svm->arr_ys = (int *) calloc(N, sizeof(int));
+//    svm->arr_alpha_s = (double *) calloc(N, sizeof(double));
+//    svm->arr_xs_row_size = 0;
+//    svm->arr_xs_column_size = training_data.predictors_column_number;
+//    svm->arr_xs_in = (double *) calloc(N * training_data.predictors_column_number, sizeof(double)); // matrix
+//    svm->arr_ys_in = (int *) calloc(N, sizeof(int));
+//    svm->arr_alpha_s_in = (double *) calloc(N, sizeof(double));
+//    svm->arr_xs_in_row_size = 0;
 
 #if DEBUG_SUPPORT_VECTORS
 
@@ -823,7 +833,7 @@ void parallel_train(const Dataset &training_data,
     svm->arr_xs = (double *) realloc(svm->arr_xs, svm->arr_xs_row_size * svm->arr_xs_column_size * sizeof(double));
     svm->arr_ys = (int *) realloc(svm->arr_ys, svm->arr_xs_row_size * sizeof(int));
     svm->arr_ys_in = (int *) realloc(svm->arr_ys_in, svm->arr_xs_in_row_size * sizeof(int));
-    svm->arr_alpha_s_in = (double *) realloc(svm->arr_alpha_s_in, svm->arr_alpha_in_size * sizeof(double));
+    svm->arr_alpha_s_in = (double *) realloc(svm->arr_alpha_s_in, svm->arr_xs_in_row_size * sizeof(double));
 
     // Update the bias
     svm->b = 0.0;
@@ -960,7 +970,7 @@ void parallel_train(const Dataset &training_data,
 }
 
 /**
- * Testing function
+ * Parallel testing function
  */
 
 void parallel_test(Dataset test_data,
@@ -974,9 +984,6 @@ void parallel_test(Dataset test_data,
     // Get the rank of the process
     int process_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &process_rank);
-
-
-    //if (process_rank == process_offset) {
 
 
     auto *class1_data = (double *) calloc(test_data.rows_number * test_data.predictors_column_number,
@@ -1045,8 +1052,6 @@ void parallel_test(Dataset test_data,
     free(class1_data);
     free(class2_data);
     free(cur_row);
-
-    // }
 
 }
 
