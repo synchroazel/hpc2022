@@ -21,17 +21,17 @@
 
 namespace kernel {
 
-    double linear(const double *x1, const double *x2, size_t size, double params[4]); // MMC
+    double linear(const double *x1, const double *x2, int size, double params[4]); // MMC
 
-    double polynomial(const double *x1, const double *x2, size_t size, double params[4]); // polynomial
+    double polynomial(const double *x1, const double *x2, int size, double params[4]); // polynomial
 
-    double radial(const double *x1, const double *x2, size_t size, const double params[4]); // radial basis
+    double radial(const double *x1, const double *x2, int size, const double params[4]); // radial basis
 
-    double sigmoid(const double *x1, const double *x2, size_t size, const double params[4]); // radial basis
+    double sigmoid(const double *x1, const double *x2, int size, const double params[4]); // radial basis
 }
 
 // define types for struct functions
-typedef double (*KernelFunc)(double *, double *, size_t, double params[4]);
+typedef double (*KernelFunc)(double *, double *, int, double params[4]);
 
 
 /**
@@ -43,9 +43,9 @@ typedef struct Kernel_SVM {
     // NB: _in = inside margin
 
     // stored for serialization
-    size_t arr_xs_row_size{};
-    size_t arr_xs_column_size{};
-    size_t arr_xs_in_row_size{};
+    int arr_xs_row_size{};
+    int arr_xs_column_size{};
+    int arr_xs_in_row_size{};
 
     double *arr_xs{};  // matrix
     int *arr_ys{};
@@ -57,7 +57,7 @@ typedef struct Kernel_SVM {
 
     double accuracy{};
     double accuracy_c1{}, accuracy_c2{};
-    size_t correct_c1{}, correct_c2{};
+    int correct_c1{}, correct_c2{};
 
 
     double params[4] = {1, 3, 0, 2};  // cost, gamma, coef0, degree
@@ -109,9 +109,9 @@ int save_svm(const Kernel_SVM *svm, const std::string &path) {
     }
 
     // write sizes
-    fwrite(&svm->arr_xs_row_size, sizeof(size_t), 1, file_to_write);
-    fwrite(&svm->arr_xs_column_size, sizeof(size_t), 1, file_to_write);
-    fwrite(&svm->arr_xs_in_row_size, sizeof(size_t), 1, file_to_write);
+    fwrite(&svm->arr_xs_row_size, sizeof(int), 1, file_to_write);
+    fwrite(&svm->arr_xs_column_size, sizeof(int), 1, file_to_write);
+    fwrite(&svm->arr_xs_in_row_size, sizeof(int), 1, file_to_write);
 
     // writing vectors
     fwrite(svm->arr_xs, sizeof(double) * svm->arr_xs_row_size * svm->arr_xs_column_size, 1, file_to_write);
@@ -127,8 +127,8 @@ int save_svm(const Kernel_SVM *svm, const std::string &path) {
     fwrite(&svm->accuracy, sizeof(double), 1, file_to_write);
     fwrite(&svm->accuracy_c1, sizeof(double), 1, file_to_write);
     fwrite(&svm->accuracy_c2, sizeof(double), 1, file_to_write);
-    fwrite(&svm->correct_c1, sizeof(size_t), 1, file_to_write);
-    fwrite(&svm->correct_c2, sizeof(size_t), 1, file_to_write);
+    fwrite(&svm->correct_c1, sizeof(int), 1, file_to_write);
+    fwrite(&svm->correct_c2, sizeof(int), 1, file_to_write);
 
     //params
     fwrite(&svm->params, sizeof(double) * 4, 1, file_to_write);
@@ -157,9 +157,9 @@ int read_svm(Kernel_SVM *svm, const std::string &path) {
     }
 
     // read sizes
-    fread(&svm->arr_xs_row_size, sizeof(size_t), 1, file_to_read);
-    fread(&svm->arr_xs_column_size, sizeof(size_t), 1, file_to_read);
-    fread(&svm->arr_xs_in_row_size, sizeof(size_t), 1, file_to_read);
+    fread(&svm->arr_xs_row_size, sizeof(int), 1, file_to_read);
+    fread(&svm->arr_xs_column_size, sizeof(int), 1, file_to_read);
+    fread(&svm->arr_xs_in_row_size, sizeof(int), 1, file_to_read);
 
     svm->arr_xs = (double *) malloc(svm->arr_xs_row_size * svm->arr_xs_column_size * sizeof(double));
     svm->arr_ys = (int *) malloc(svm->arr_xs_row_size * sizeof(int));
@@ -182,8 +182,8 @@ int read_svm(Kernel_SVM *svm, const std::string &path) {
     fread(&svm->accuracy, sizeof(double), 1, file_to_read);
     fread(&svm->accuracy_c1, sizeof(double), 1, file_to_read);
     fread(&svm->accuracy_c2, sizeof(double), 1, file_to_read);
-    fread(&svm->correct_c1, sizeof(size_t), 1, file_to_read);
-    fread(&svm->correct_c2, sizeof(size_t), 1, file_to_read);
+    fread(&svm->correct_c1, sizeof(int), 1, file_to_read);
+    fread(&svm->correct_c2, sizeof(int), 1, file_to_read);
 
     //params
     fread(&svm->params, sizeof(double) * 4, 1, file_to_read);
@@ -213,7 +213,7 @@ void log(const std::string &str) {
 
 double f(Kernel_SVM *svm, double *x) {
 
-    size_t i;
+    int i;
     double ans;
 
     ans = 0.0;
