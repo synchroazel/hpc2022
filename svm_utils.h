@@ -10,7 +10,7 @@
 #define DEBUG_SUPPORT_VECTORS false
 #define MASTER_PROCESS 0
 #define DEBUG_TRAIN false
-#define FINAL_PRINT true
+#define FINAL_PRINT false
 
 
 /**

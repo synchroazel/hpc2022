@@ -327,4 +327,238 @@ void tune_polynomial(Dataset *df_train,
 
 }
 
+
+void tune_linear2(Dataset *df_train,
+                 Dataset *df_validation,
+                 const double *cost_array,
+                 int cost_array_size,
+                 double *result_table, /*output*/
+                 int offset,
+                 int result_table_columns,
+                 int process_offset,
+                 int available_processes,
+                 double lr = DEFAULT_LEARNING_RATE,
+                 double limit = DEFAULT_LIMIT,
+                 double eps = DEFAULT_EPS,
+                 bool verbose = false) {
+
+    int current_process; // es: 21, with offset 20
+    MPI_Comm_rank(MPI_COMM_WORLD, &current_process);
+
+    for(int i = 0; i<cost_array_size; i++){
+        Kernel_SVM svm;
+        set_kernel_function(&svm, 'l');
+        svm.verbose = verbose;
+
+        double gamma = 0;
+        double coef0 = 0;
+        double degree = 0;
+        double params[4] = {cost_array[i],gamma, coef0, degree};
+
+#if DEBUG_TUNE
+        std::cout << "Process " << current_process << " training (radial) with cost " << params[0] << " and gamma " << params[1] << std::endl;
+#endif
+        parallel_train(*df_train, &svm, params, lr, limit,process_offset,available_processes,false,"",0,eps);
+
+        // TODO: change to parallel
+        serial_test(*df_validation, &svm);
+
+
+        result_table[index(offset + i, 0, result_table_columns)] = params[0];
+        result_table[index(offset + i , 1, result_table_columns)] = params[1];
+        result_table[index(offset + i , 2, result_table_columns)] = params[2];
+        result_table[index(offset + i , 3, result_table_columns)] = params[3];
+
+        result_table[index(offset + i , 4, result_table_columns)] = svm.accuracy;
+        result_table[index(offset + i , 5, result_table_columns)] = svm.accuracy_c1;
+        result_table[index(offset + i , 6, result_table_columns)] = svm.accuracy_c2;
+    }
+}
+
+
+
+void tune_radial2(Dataset *df_train,
+                 Dataset *df_validation,
+                 const double *cost_array,
+                 int cost_array_size,
+                 const double *gamma_array,
+                 int gamma_array_size,
+                 double *result_table, /*output*/
+                 int offset,
+                 int result_table_columns,
+                 int process_offset,
+                 int available_processes,
+
+                 double lr=DEFAULT_LEARNING_RATE,
+                 double limit= DEFAULT_LIMIT,
+                 double eps= DEFAULT_EPS,
+                 bool verbose= false)
+{
+
+
+    int current_process; // es: 21, with offset 20
+    MPI_Comm_rank(MPI_COMM_WORLD, &current_process);
+
+
+
+    for(int i = 0; i<cost_array_size; i++) {
+        for (int j = 0; j < gamma_array_size; j++) {
+            Kernel_SVM svm;
+            set_kernel_function(&svm, 'r');
+            svm.verbose = verbose;
+
+            double coef0 = 0;
+            double degree = 0;
+            double params[4] = {cost_array[i], gamma_array[j],
+                                coef0, degree};
+
+#if DEBUG_TUNE
+            std::cout << "Process " << current_process << " training (radial) with cost " << params[0] << " and gamma " << params[1] << std::endl;
+#endif
+            parallel_train(*df_train, &svm, params, lr, limit,process_offset,available_processes,false,"",0,eps);
+
+            // TODO: change to parallel
+            serial_test(*df_validation, &svm);
+
+            result_table[index(offset + i, 0, result_table_columns)] = params[0];
+            result_table[index(offset + i, 1, result_table_columns)] = params[1];
+            result_table[index(offset + i, 2, result_table_columns)] = params[2];
+            result_table[index(offset + i, 3, result_table_columns)] = params[3];
+
+            result_table[index(offset + i, 4, result_table_columns)] = svm.accuracy;
+            result_table[index(offset + i, 5, result_table_columns)] = svm.accuracy_c1;
+            result_table[index(offset + i, 6, result_table_columns)] = svm.accuracy_c2;
+        }
+    }
+
+}
+
+
+void tune_sigmoid2(Dataset *df_train,
+                  Dataset *df_validation,
+                  const double *cost_array,
+                  int cost_array_size,
+                  const double *gamma_array,
+                  int gamma_array_size,
+                  const double *coef0_array,
+                  int coef0_array_size,
+                  double *result_table, /*output*/
+                  int offset,
+                  int result_table_columns,
+                  int process_offset,
+                  int available_processes,
+
+                  double lr = DEFAULT_LEARNING_RATE,
+                  double limit = DEFAULT_LIMIT,
+                  double eps = DEFAULT_EPS,
+                  bool verbose= false) {
+
+    int current_process; // es: 21, with offset 20
+    MPI_Comm_rank(MPI_COMM_WORLD, &current_process);
+
+
+
+
+    for(int i = 0; i<cost_array_size; i++) {
+        for (int j = 0; j < gamma_array_size; j++) {
+            for (int k = 0; k < coef0_array_size; k++) {
+
+                Kernel_SVM svm;
+                set_kernel_function(&svm, 's');
+                svm.verbose = verbose;
+                double degree = 0;
+                double params[4] = {cost_array[i],
+                                    gamma_array[j],
+                                    coef0_array[k],
+                                    degree};
+
+#if DEBUG_TUNE
+                std::cout << "Process " << current_process << " training (sigmoid) with cost " << params[0] << " , gamma " << params[1] << " and intercept " << params[2] << std::endl;
+#endif
+                parallel_train(*df_train, &svm, params, lr, limit,process_offset,available_processes,false,"",0,eps);
+
+                // TODO: change to parallel
+                serial_test(*df_validation, &svm);
+
+                result_table[index(offset + i, 0, result_table_columns)] = params[0];
+                result_table[index(offset + i, 1, result_table_columns)] = params[1];
+                result_table[index(offset + i, 2, result_table_columns)] = params[2];
+                result_table[index(offset + i, 3, result_table_columns)] = params[3];
+
+                result_table[index(offset + i, 4, result_table_columns)] = svm.accuracy;
+                result_table[index(offset + i, 5, result_table_columns)] = svm.accuracy_c1;
+                result_table[index(offset + i, 6, result_table_columns)] = svm.accuracy_c2;
+            }
+
+        }
+    }
+}
+
+
+
+void tune_polynomial2(Dataset *df_train,
+                     Dataset *df_validation,
+                     const double *cost_array,
+                     int cost_array_size,
+                     const double *gamma_array,
+                     int gamma_array_size,
+                     const double *coef0_array,
+                     int coef0_array_size,
+                     const double *degree_array,
+                     int degree_array_size,
+                     double *result_table, /*output*/
+                     int offset,
+                     int result_table_columns,
+                     int process_offset,
+                     int available_processes,
+
+                     double lr = DEFAULT_LEARNING_RATE,
+                     double limit = DEFAULT_LIMIT,
+                     double eps = DEFAULT_EPS,
+                     bool verbose=false) {
+
+    int current_process; // es: 21, with offset 20
+    MPI_Comm_rank(MPI_COMM_WORLD, &current_process);
+
+
+
+    for(int i = 0; i<cost_array_size; i++) {
+        for (int j = 0; j < gamma_array_size; j++) {
+            for (int k = 0; k < coef0_array_size; k++) {
+                for (int l = 0; l < degree_array_size; l++) {
+
+
+                    Kernel_SVM svm;
+                    set_kernel_function(&svm, 'p');
+                    svm.verbose = verbose;
+                    double params[4] = {cost_array[i],
+                                        gamma_array[j],
+                                        coef0_array[k],
+                                        degree_array[l]};
+
+#if DEBUG_TUNE
+                    std::cout << "Process " << current_process << " training (polynomial) with cost " << params[0] << " , gamma " << params[1] << ", intercept " << params[2]  << " and degree " << params[3] << std::endl;
+#endif
+                    parallel_train(*df_train, &svm, params, lr, limit,process_offset,available_processes,false,"",0,eps);
+
+                    // TODO: change to parallel
+                    serial_test(*df_validation, &svm);
+
+                    result_table[index(offset + i, 0, result_table_columns)] = params[0];
+                    result_table[index(offset + i, 1, result_table_columns)] = params[1];
+                    result_table[index(offset + i, 2, result_table_columns)] = params[2];
+                    result_table[index(offset + i, 3, result_table_columns)] = params[3];
+
+                    result_table[index(offset + i, 4, result_table_columns)] = svm.accuracy;
+                    result_table[index(offset + i, 5, result_table_columns)] = svm.accuracy_c1;
+                    result_table[index(offset + i, 6, result_table_columns)] = svm.accuracy_c2;
+                }
+
+            }
+        }
+    }
+
+}
+
+
 #endif //HPC2022_TUNE_SVM_H

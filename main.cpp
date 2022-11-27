@@ -138,19 +138,19 @@ int main(int argc, char *argv[]) {
      */
 
 
-    flag = training;
-
+    //flag = training;
+    flag=tuning;
 
     /* Antonio */
-    std::string filepath_training = "/Users/azel/Developer/hpc2022/data/iris_train.csv";
-    std::string filepath_validation = "/Users/azel/Developer/hpc2022/data/iris_validation.csv";
-    std::string save_dir_path = "/Users/azel/Developer/hpc2022/saved_svm/";
+    // std::string filepath_training = "/Users/azel/Developer/hpc2022/data/iris_train.csv";
+    // std::string filepath_validation = "/Users/azel/Developer/hpc2022/data/iris_validation.csv";
+    // std::string save_dir_path = "/Users/azel/Developer/hpc2022/saved_svm/";
 
 
     /* Maurizio */
-//    std::string filepath_training = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
-//    std::string filepath_validation = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_validation.csv";
-//    std::string save_dir_path = "/home/dmmp/Documents/GitHub/hpc2022/saved_svm";
+    std::string filepath_training = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
+    std::string filepath_validation = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_validation.csv";
+    std::string save_dir_path = "/home/dmmp/Documents/GitHub/hpc2022/saved_svm";
 
 
     std::string filepath_hyper_parameters = "../data/hyperparameters.csv"; // TODO: implement
@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
     char ker_type = 'l';
 
     bool verbose = false;
-
+    bool tuning_logic = true;
 
     double Cost = 5;
     double gamma = 0.1;
@@ -471,8 +471,8 @@ int main(int argc, char *argv[]) {
 
 
 
-            // TODO: decide condition
-            if (world_size < 100) {
+
+            if (tuning_logic) {
                 // one after the other
 
 #if PERFORMANCE_CHECK
@@ -516,7 +516,7 @@ int main(int argc, char *argv[]) {
                 if (process_rank == MASTER_PROCESS) {
                     std::cout << "Starting radial tuning" << std::endl;
                 }
-                tune_radial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,local_tuning_table, linear_rows, tuning_table_columns, MASTER_PROCESS, world_size,lr,limit,eps,verbose);
+                //tune_radial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,local_tuning_table, linear_rows, tuning_table_columns, MASTER_PROCESS, world_size,lr,limit,eps,verbose);
                 std::cout << "Process " << process_rank << " has finished radial tuning" << std::endl;
                 //sigmoid
 
@@ -537,7 +537,7 @@ int main(int argc, char *argv[]) {
                 if (process_rank == MASTER_PROCESS) {
                     std::cout << "Starting sigmoid tuning" << std::endl;
                 }
-                tune_sigmoid(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size, local_tuning_table, linear_rows + radial_rows, tuning_table_columns, MASTER_PROCESS, world_size);
+                //tune_sigmoid(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size, local_tuning_table, linear_rows + radial_rows, tuning_table_columns, MASTER_PROCESS, world_size);
                 std::cout << "Process " << process_rank << " has finished sigmoid tuning" << std::endl;
                 //polynomial
 
@@ -603,7 +603,130 @@ int main(int argc, char *argv[]) {
 #endif
 
             } else {
-                // together, will require a gather
+#if PERFORMANCE_CHECK
+
+                MPI_Barrier(MPI_COMM_WORLD);
+                *(time_checks + time_iterator) = MPI_Wtime(); // end of allocations
+
+                if (process_rank == MASTER_PROCESS) {
+                    std::cout << "\n Latest memory allocation ends at time " << *(time_checks + time_iterator)
+                              << std::endl;
+                    std::cout << "It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                              << " seconds\n" << std::endl;
+
+                }
+                ++time_iterator; // start linear tuning
+
+#endif
+
+                //linear
+                if (process_rank == MASTER_PROCESS) {
+                    std::cout << "Starting linear tuning" << std::endl;
+                }
+                //tune_linear2(&df_train, &df_validation, cost_array, cost_array_size, local_tuning_table, 0,tuning_table_columns, MASTER_PROCESS, world_size,lr,limit,eps,verbose);
+                std::cout << "Process " << process_rank << " has finished linear tuning" << std::endl;
+                //radial
+
+#if PERFORMANCE_CHECK
+
+                MPI_Barrier(MPI_COMM_WORLD);
+                *(time_checks + time_iterator) = MPI_Wtime();
+
+                if (process_rank == MASTER_PROCESS) {
+                    std::cout << "\n linear tuning ends at time " << *(time_checks + time_iterator) << std::endl;
+                    std::cout << "\n It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                              << "seconds\n" << std::endl;
+                }
+                ++time_iterator; // start radial tuning
+
+#endif
+
+                if (process_rank == MASTER_PROCESS) {
+                    std::cout << "Starting radial tuning" << std::endl;
+                }
+                //tune_radial2(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,local_tuning_table, linear_rows, tuning_table_columns, MASTER_PROCESS, world_size,lr,limit,eps,verbose);
+                std::cout << "Process " << process_rank << " has finished radial tuning" << std::endl;
+                //sigmoid
+
+#if PERFORMANCE_CHECK
+
+                MPI_Barrier(MPI_COMM_WORLD);
+                *(time_checks + time_iterator) = MPI_Wtime();
+
+                if (process_rank == MASTER_PROCESS) {
+                    std::cout << "\n radial tuning ends at time " << *(time_checks + time_iterator) << std::endl;
+                    std::cout << "\n It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                              << "seconds\n" << std::endl;
+                }
+                ++time_iterator; // start sigmoid tuning
+
+#endif
+
+                if (process_rank == MASTER_PROCESS) {
+                    std::cout << "Starting sigmoid tuning" << std::endl;
+                }
+                //tune_sigmoid2(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size, local_tuning_table, linear_rows + radial_rows, tuning_table_columns, MASTER_PROCESS, world_size);
+                std::cout << "Process " << process_rank << " has finished sigmoid tuning" << std::endl;
+                //polynomial
+
+#if PERFORMANCE_CHECK
+
+                MPI_Barrier(MPI_COMM_WORLD);
+                *(time_checks + time_iterator) = MPI_Wtime();
+
+                if (process_rank == MASTER_PROCESS) {
+                    std::cout << "\n sigmoid tuning ends at time " << *(time_checks + time_iterator) << std::endl;
+                    std::cout << "\n It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                              << "seconds\n" << std::endl;
+                }
+                ++time_iterator; // start polynomial tuning
+
+#endif
+
+                if (process_rank == MASTER_PROCESS) {
+                    std::cout << "Starting polynomial tuning" << std::endl;
+                }
+                tune_polynomial2(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size,degree_array, degree_array_size, local_tuning_table, linear_rows + radial_rows +sigmoid_rows , tuning_table_columns, MASTER_PROCESS, world_size);
+                std::cout << "Process " << process_rank << " has finished polynomial tuning" << std::endl;
+
+#if PERFORMANCE_CHECK
+
+                MPI_Barrier
+                        (MPI_COMM_WORLD);
+                *(time_checks + time_iterator) = MPI_Wtime();
+
+                if (process_rank == MASTER_PROCESS) {
+                    std::cout << "\n polynomial tuning ends at time " << *(time_checks + time_iterator) << std::endl;
+                    std::cout << "\n It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                              << "seconds\n" << std::endl;
+                    std::cout << "\nStarting reduce\n" << std::endl;
+                }
+                ++time_iterator; // start reduce
+
+#endif
+
+                MPI_Reduce(local_tuning_table, final_tuning_table, (int) (tuning_table_rows * tuning_table_columns),
+                           MPI_DOUBLE, MPI_SUM, MASTER_PROCESS, MPI_COMM_WORLD);
+                free(local_tuning_table);
+
+#if PERFORMANCE_CHECK
+
+                MPI_Barrier(MPI_COMM_WORLD);
+                *(time_checks + time_iterator) = MPI_Wtime();
+
+                if (process_rank == MASTER_PROCESS) {
+                    std::cout << "\n Reduce ends at time " << *(time_checks + time_iterator) << std::endl;
+                    std::cout << "\n It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                              << "seconds\n" << std::endl;
+                }
+                ++time_iterator; // start calculating accuracy
+
+#endif
+#if DEBUG_MAIN
+                if(process_rank == MASTER_PROCESS){
+                    print_matrix(final_tuning_table, tuning_table_rows, tuning_table_columns);
+                }
+#endif
             }
             if (process_rank == MASTER_PROCESS) {
                 // todo: revise selection logic
