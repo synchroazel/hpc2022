@@ -9,7 +9,7 @@
 
 #define DEBUG_SUPPORT_VECTORS true
 #define MASTER_PROCESS 0
-#define DEBUG_TRAIN false
+#define DEBUG_TRAIN true
 
 /**
  * Linear kernel function
@@ -650,6 +650,7 @@ void parallel_train(const Dataset &training_data,
         for (i = start; (i < end); i++) {
 
             item1_local = 0;
+            item1=0;
             if (i < N) {
                 for (j = 0; j < N; j++) {
                     get_row(training_data, i, false, xi);
@@ -659,11 +660,11 @@ void parallel_train(const Dataset &training_data,
                 }
             }
 
-            // std::cout << local_alpha[j] << std::endl;
 
             MPI_Allreduce(&item1_local, &item1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
             item2_local = 0;
+            item2=0;
             if(i < N){
                 for (j = 0; j < N; j++) {
                     item2_local += local_alpha[j] * (double) y[i] * (double) y[j];
@@ -716,11 +717,13 @@ void parallel_train(const Dataset &training_data,
 
         // update bias Beta
         item3_local = 0.0;
+        item3=0;
         for (i = start; (i < end) && (i < N); i++) {
             item3_local += alpha[i] * (double) y[i];
         }
 
         // std::cout << "process " << current_process << " has item3_local = " << item3_local << "\n" << std::endl;
+
 
         MPI_Allreduce(&item3_local, &item3, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
@@ -731,7 +734,6 @@ void parallel_train(const Dataset &training_data,
             std::cout << "\r error = " << error << std::flush;
         }
 
-        memcpy(local_alpha, alpha, sizeof(double ) * N);
 
 
 
@@ -739,7 +741,7 @@ void parallel_train(const Dataset &training_data,
 
     /* ----------------------------------------------------------------------------- */
 
-    // std::cout << "After do-while, process " << current_process << " is still alive" << std::endl;
+    std::cout << "After do-while, process " << current_process << " is still alive" << std::endl;
 
 
 
@@ -750,6 +752,7 @@ void parallel_train(const Dataset &training_data,
     // need to check for memory leaks, we will try another approach in the meanwhile
 
     free(local_alpha);
+    local_alpha = nullptr;
 
     // used for SVM kernel
     auto *local_arr_xs = (double *) calloc(iters_per_process * training_data.predictors_column_number, sizeof(double));
@@ -768,14 +771,13 @@ void parallel_train(const Dataset &training_data,
     double local_bias = 0.0;
 
 
-    //int local_xs_size = 0;
-    //int local_xs_in_size = 0;
-
-    //int sv = 0, svi = 0;
-
 
     // print out alpha
+    std::cout << "Process " << current_process << " printing alpha: " << std:: endl;
+    print_vector(alpha, N);
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    exit(1);
 
     for (i = start; (i < end) && (i < N); i++) {
 
@@ -786,7 +788,7 @@ void parallel_train(const Dataset &training_data,
             memcpy(local_arr_xs + index(local_arr_xs_row_size, 0, training_data.predictors_column_number), xi,
                    training_data.predictors_column_number * sizeof(double));
 
-            // std::cout << "here 1" << std::endl;
+            std::cout << "process " << current_process << " found a sv outside "<< std::endl;
 
             *(local_arr_ys + local_arr_xs_row_size) = y[i];
 
@@ -802,6 +804,7 @@ void parallel_train(const Dataset &training_data,
             memcpy(local_arr_xs_in + index(local_arr_xs_in_row_size, 0, training_data.predictors_column_number), xi,
                    training_data.predictors_column_number * sizeof(double));
 
+            std::cout << "process " << current_process << " found a sv inside "<< std::endl;
 
             *(local_arr_ys_in + local_arr_xs_in_row_size) = y[i];
 
@@ -813,6 +816,7 @@ void parallel_train(const Dataset &training_data,
 
     }
 
+    std::cout << "process " << current_process << " started at " << start << " and ended at " << end << std::endl;
     std::cout << "process " << current_process << " has " << local_arr_xs_row_size << " support vectors on the margin" << std::endl;
     std::cout << "process " << current_process << " has " << local_arr_xs_in_row_size << " support vectors inside the margin" << std::endl;
 
@@ -848,6 +852,7 @@ void parallel_train(const Dataset &training_data,
     // reduce for master's svm properties
     MPI_Reduce(&local_arr_xs_row_size, &svm->arr_xs_row_size, 1, MPI_INT, MPI_SUM, process_offset, MPI_COMM_WORLD);
     MPI_Reduce(&local_arr_xs_in_row_size, &svm->arr_xs_in_row_size, 1, MPI_INT, MPI_SUM, process_offset, MPI_COMM_WORLD);
+
 
     if(current_process == process_offset){
         svm->b /= (double) (svm->arr_xs_row_size + svm->arr_xs_in_row_size);
