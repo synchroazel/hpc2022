@@ -141,20 +141,26 @@ int main(int argc, char *argv[]) {
     flag = training;
 
 
+    /* Antonio */
+    std::string filepath_training = "/Users/azel/Developer/hpc2022/data/iris_train.csv";
+    std::string filepath_validation = "/Users/azel/Developer/hpc2022/data/iris_validation.csv";
+    std::string save_dir_path = "/Users/azel/Developer/hpc2022/saved_svm/";
 
-    std::string filepath_training = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
-    // std::string filepath_training = "/Users/azel/Developer/hpc2022/data/iris_train.csv";
-    // std::string filepath_validation = "/Users/azel/Developer/hpc2022/data/iris_validation.csv";
-    std::string filepath_validation = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_validation.csv";
+
+    /* Maurizio */
+//    std::string filepath_training = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
+//    std::string filepath_validation = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_validation.csv";
+//    std::string save_dir_path = "/home/dmmp/Documents/GitHub/hpc2022/saved_svm";
+
+
     std::string filepath_hyper_parameters = "../data/hyperparameters.csv"; // TODO: implement
     std::string filepath_svm = "/Users/azel/Developer/hpc2022/saved_svm/radialr_C0.100000_G1.000000.svm";
+
     int rows_t = 70, rows_v = 30, columns = 5, target_column = 5;
     char ker_type = 'l';
 
     bool verbose = false;
 
-    // std::string save_dir_path = "/Users/azel/Developer/hpc2022/saved_svm/";
-    std::string save_dir_path = "/home/dmmp/Documents/GitHub/hpc2022/saved_svm";
 
     double Cost = 5;
     double gamma = 0.1;
