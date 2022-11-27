@@ -11,6 +11,7 @@
 #define MASTER_PROCESS 0
 #define DEBUG_TRAIN true
 
+
 /**
  * Linear kernel function
  */
@@ -565,7 +566,7 @@ void parallel_train(const Dataset &training_data,
 
 #endif
 
-
+    int N = (int) training_data.rows_number;
     // TODO: implement parallelization
     svm->params[0] = hyper_parameters[0];
 
@@ -575,36 +576,42 @@ void parallel_train(const Dataset &training_data,
 
     svm->params[3] = hyper_parameters[3];
 
-    int y[training_data.rows_number];  // array
-    memset(y, 0, training_data.rows_number * sizeof(int));
+    //int y[training_data.rows_number];  // array
+    //memset(y, 0, training_data.rows_number * sizeof(int));
+
+    auto* y = (int*) calloc(N, sizeof(int));
+    auto* local_y = (int*) calloc(N, sizeof(int));
+
     int i;
     //TODO: all checks
     int control = 0; // used for checks
 
     int start = (current_process - process_offset) * iters_per_process;
     int end = start + iters_per_process;
-    for (i = start; i < end; i++) {
+    for (i = start; i < end && i < N; i++) {
 
         // look at y
         if (training_data.class_vector[i] == training_data.unique_classes[class_1]) { // if first class record
-            y[i] = -1;  // -1
+            local_y[i] = -1;  // -1
         } else { // if second class record
 
-            y[i] = 1;  // +1
+            local_y[i] = 1;  // +1
 
         }
     }
 
+    MPI_Allreduce(local_y, y,N, MPI_INT, MPI_SUM,MPI_COMM_WORLD);
+    free(local_y);
+    local_y= nullptr;
 
-
-    int N = (int) training_data.rows_number;
 
 
 
     i = 0; // i will be useful later
     int j;
 
-    bool judge=false;
+    int judge=0;
+
     double item1 = 0, item2 = 0, item3 = 0;
     auto* alpha = (double*) calloc(N , sizeof(double));
     double delta=0;
@@ -612,15 +619,14 @@ void parallel_train(const Dataset &training_data,
     double error=0;
 
     // set Lagrange Multiplier and Parameters
-    auto* local_alpha = (double*) calloc(N, sizeof(double));
 
     beta = 1.0;
 
     // tmp rows
     double xi[training_data.predictors_column_number];
-    memset(local_alpha, 0, training_data.predictors_column_number * sizeof(double));
+    memset(xi, 0, training_data.predictors_column_number * sizeof(double));
     double xj[training_data.predictors_column_number];
-    memset(local_alpha, 0, training_data.predictors_column_number * sizeof(double));
+    memset(xj, 0, training_data.predictors_column_number * sizeof(double));
 
     // training
     if (svm->verbose) {
@@ -636,81 +642,75 @@ void parallel_train(const Dataset &training_data,
     double item2_local;
     double item3_local;
 
-    // std::cout << "\nprocess " << current_process << " starting point: " << start << " | ending point: " << end << std::endl;
+    std::cout << "\nprocess " << current_process << " starting point: " << start << " | ending point: " << end-1 << std::endl;
 
-    //std::cout << "hello from process " << current_process << std::endl;
 
     do {
 
-        judge = false;
+        judge = 0;
         error = 0.0;
 
         // update Alpha
 
-        for (i = start; (i < end); i++) {
+        for (i = 0; i < N; i++) {
 
             item1_local = 0;
             item1=0;
-            if (i < N) {
-                for (j = 0; j < N; j++) {
-                    get_row(training_data, i, false, xi);
-                    get_row(training_data, j, false, xj);
-                    item1_local += local_alpha[j] * (double) y[i] * (double) y[j] *
-                                   svm->K(xi, xj, (int) training_data.predictors_column_number, hyper_parameters);
-                }
-            }
 
+            for (j = start; j < end && j < N; j++) {
+
+                get_row(training_data, i, false, xi);
+                get_row(training_data, j, false, xj);
+                item1_local += alpha[j] * (double) y[i] * (double) y[j] *
+                               svm->K(xi, xj, (int) training_data.predictors_column_number, hyper_parameters);
+            }
 
             MPI_Allreduce(&item1_local, &item1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
+            // if(current_process == process_offset) std::cout << std::endl <<"final: " << item1 << "\n";
+
             item2_local = 0;
             item2=0;
-            if(i < N){
-                for (j = 0; j < N; j++) {
-                    item2_local += local_alpha[j] * (double) y[i] * (double) y[j];
-                }
+
+            for (j = start; j < N && j<end; j++) {
+                item2_local += alpha[j] * (double) y[i] * (double) y[j];
             }
+
 
             MPI_Allreduce(&item2_local, &item2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
             delta = 1.0 - item1 - beta * item2;
 
-            if(i < N){
-                local_alpha[i] += lr * delta;
-            }
+            alpha[i] += lr * delta;
 
 
-            if (local_alpha[i] < 0.0) {
-                local_alpha[i] = 0.0;
-            } else if (local_alpha[i] > hyper_parameters[0]/*Cost*/) {
-                local_alpha[i] = hyper_parameters[0];
+
+            if (alpha[i] < 0.0) {
+                alpha[i] = 0.0;
+            } else if (alpha[i] > hyper_parameters[0]/*Cost*/) {
+                alpha[i] = hyper_parameters[0];
             } else if (std::abs(delta) > limit) {
-                judge = true;
+                ++judge;
                 error += std::abs(delta) - limit;
             }
-
-
         }
 
-        // std::cout << "process " << current_process << " did loop " << locl_count << " times" << std::endl;
-
-        //std::cout << "process " << current_process << " is still alive " << std::endl;
-        //std::cout << "process " << current_process << " has item1 = " << item1 << "\n" << std::endl;
 
 #if DEBUG_TRAIN
-        std::cout << "\n[BEFORE REDUCE] local alpha on process " << current_process << ": " << std::endl;
-        for (int k = 0; k < N; k++) {
-            std::cout << local_alpha[k] << " ";
-        } std::cout << std::endl;
+        // std::cout << "\n[BEFORE REDUCE] local alpha on process " << current_process << ": " << std::endl;
+        // for (int k = 0; k < N; k++) {
+        //     std::cout << local_alpha[k] << " ";
+        // } std::cout << std::endl;
 #endif
 
-         MPI_Allreduce(local_alpha, alpha, N, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        // MPI_Allreduce(local_alpha, alpha, N, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
 #if DEBUG_TRAIN
+        if(current_process == process_offset){
         std::cout << "\n[AFTER REDUCE] alpha on process " << current_process << ": " << std::endl;
-        for (int k = 0; k < N; k++) {
-            std::cout << alpha[k] << " ";
-        } std::cout << std::endl;
+
+            print_vector(alpha, N);
+        }
 #endif
 
 
@@ -734,15 +734,16 @@ void parallel_train(const Dataset &training_data,
             std::cout << "\r error = " << error << std::flush;
         }
 
+        if(current_process == process_offset) std::cout << std::endl <<"judge: " << judge << "\n";
 
-
-
-    } while (judge);
+    } while (judge > 0);
 
     /* ----------------------------------------------------------------------------- */
 
+    MPI_Barrier(MPI_COMM_WORLD);
     std::cout << "After do-while, process " << current_process << " is still alive" << std::endl;
 
+    MPI_Barrier(MPI_COMM_WORLD);
 
 
     if (svm->verbose) { std::cout << "\n├───────────────────────────────────────────────────────┤" << std::endl; }
@@ -751,8 +752,7 @@ void parallel_train(const Dataset &training_data,
     // NB: N are the rows of the new matrix
     // need to check for memory leaks, we will try another approach in the meanwhile
 
-    free(local_alpha);
-    local_alpha = nullptr;
+
 
     // used for SVM kernel
     auto *local_arr_xs = (double *) calloc(iters_per_process * training_data.predictors_column_number, sizeof(double));
@@ -770,14 +770,16 @@ void parallel_train(const Dataset &training_data,
 
     double local_bias = 0.0;
 
-
-
+#if DEBUG_TRAIN
     // print out alpha
-    std::cout << "Process " << current_process << " printing alpha: " << std:: endl;
-    print_vector(alpha, N);
+    if(current_process == process_offset){
+        std::cout << "Process " << current_process << " printing alpha: " << std:: endl;
+        print_vector(alpha, N);
+    }
+#endif
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    exit(1);
+
+    //exit(1);
 
     for (i = start; (i < end) && (i < N); i++) {
 
@@ -787,9 +789,9 @@ void parallel_train(const Dataset &training_data,
             get_row(training_data, i, false, xi);
             memcpy(local_arr_xs + index(local_arr_xs_row_size, 0, training_data.predictors_column_number), xi,
                    training_data.predictors_column_number * sizeof(double));
-
+#if DEBUG_TRAIN
             std::cout << "process " << current_process << " found a sv outside "<< std::endl;
-
+#endif
             *(local_arr_ys + local_arr_xs_row_size) = y[i];
 
             *(local_arr_alpha_s + local_arr_xs_row_size) = alpha[i];
@@ -803,9 +805,9 @@ void parallel_train(const Dataset &training_data,
             get_row(training_data, i, false, xi);
             memcpy(local_arr_xs_in + index(local_arr_xs_in_row_size, 0, training_data.predictors_column_number), xi,
                    training_data.predictors_column_number * sizeof(double));
-
+#if DEBUG_TRAIN
             std::cout << "process " << current_process << " found a sv inside "<< std::endl;
-
+#endif
             *(local_arr_ys_in + local_arr_xs_in_row_size) = y[i];
 
             *(local_arr_alpha_s_in + local_arr_xs_in_row_size) = alpha[i];
@@ -816,10 +818,11 @@ void parallel_train(const Dataset &training_data,
 
     }
 
+#if DEBUG_TRAIN
     std::cout << "process " << current_process << " started at " << start << " and ended at " << end << std::endl;
     std::cout << "process " << current_process << " has " << local_arr_xs_row_size << " support vectors on the margin" << std::endl;
     std::cout << "process " << current_process << " has " << local_arr_xs_in_row_size << " support vectors inside the margin" << std::endl;
-
+#endif
     // Update the bias
 
     for (i = 0; i < local_arr_xs_row_size; i++) {
@@ -840,13 +843,12 @@ void parallel_train(const Dataset &training_data,
         }
     }
 
+#if DEBUG_TRAIN
     std::cout << "process " << current_process << " has local bias " << local_bias << std::endl;
+#endif
 
     MPI_Reduce(&local_bias, &svm->b, 1, MPI_DOUBLE, MPI_SUM, process_offset, MPI_COMM_WORLD);
 
-    if (current_process == process_offset) {
-        std::cout << "process " << current_process << " has global bias " << svm->b << std::endl;
-    }
 
 
     // reduce for master's svm properties
@@ -858,12 +860,18 @@ void parallel_train(const Dataset &training_data,
         svm->b /= (double) (svm->arr_xs_row_size + svm->arr_xs_in_row_size);
     }
 
-
+#if DEBUG_TRAIN
+    if (current_process == process_offset) {
+        std::cout << "process " << current_process << " has global bias " << svm->b << std::endl;
+    }
+#endif
 
     // send sizes to all processes for GatherV
     MPI_Allgather(&local_arr_xs_row_size,1 , MPI_INT, xs_sizes, available_processes, MPI_INT, MPI_COMM_WORLD);
     MPI_Allgather(&local_arr_xs_in_row_size,1 , MPI_INT, xs_in_sizes, available_processes, MPI_INT, MPI_COMM_WORLD);
 
+
+    exit(1);
     auto* array_of_sizes_x = (int *) calloc(available_processes, sizeof (int));
     auto* array_of_sizes_x_in = (int *) calloc(available_processes, sizeof (int));
     auto* array_of_displacements = (int *) calloc(available_processes, sizeof (int));
@@ -892,15 +900,15 @@ void parallel_train(const Dataset &training_data,
     }
 
 
-    if (current_process == process_offset) {
-        svm->arr_xs_column_size = (int)training_data.predictors_column_number;
-        svm->arr_xs = (double *) calloc(svm->arr_xs_row_size * training_data.predictors_column_number, sizeof(double));
-        svm->arr_ys = (int *) calloc(svm->arr_xs_row_size, sizeof(int));
-        svm->arr_alpha_s = (double *) calloc(svm->arr_xs_row_size, sizeof(double));
-        svm->arr_xs_in = (double *) calloc(svm->arr_xs_in_row_size * training_data.predictors_column_number,sizeof(double));
-        svm->arr_ys_in = (int *) calloc(svm->arr_xs_in_row_size, sizeof(int));
-        svm->arr_alpha_s_in = (double *) calloc(svm->arr_xs_in_row_size, sizeof(double));
-    }
+
+    svm->arr_xs_column_size = (int)training_data.predictors_column_number;
+    svm->arr_xs = (double *) calloc(svm->arr_xs_row_size * training_data.predictors_column_number, sizeof(double));
+    svm->arr_ys = (int *) calloc(svm->arr_xs_row_size, sizeof(int));
+    svm->arr_alpha_s = (double *) calloc(svm->arr_xs_row_size, sizeof(double));
+    svm->arr_xs_in = (double *) calloc(svm->arr_xs_in_row_size * training_data.predictors_column_number,sizeof(double));
+    svm->arr_ys_in = (int *) calloc(svm->arr_xs_in_row_size, sizeof(int));
+    svm->arr_alpha_s_in = (double *) calloc(svm->arr_xs_in_row_size, sizeof(double));
+
 
     // debug
     //print_matrix(local_arr_xs, local_arr_xs_row_size, training_data.predictors_column_number);
@@ -957,6 +965,7 @@ void parallel_train(const Dataset &training_data,
 
 #if DEBUG_SUPPORT_VECTORS
 
+if(current_process == process_offset) {
     std::cout << "Before realloc" << std::endl;
 
     std::cout << "x" << std::endl;
@@ -976,6 +985,7 @@ void parallel_train(const Dataset &training_data,
 
     std::cout << "alpha in" << std::endl;
     print_vector(svm->arr_alpha_s_in, svm->arr_xs_in_row_size);
+}
 
 #endif
 
