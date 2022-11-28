@@ -208,7 +208,7 @@ void log(const std::string &str) {
 
 
 /**
- * Function f() for training
+ * Function f()
  */
 
 double f(Kernel_SVM *svm, double *x) {
@@ -233,7 +233,7 @@ double f(Kernel_SVM *svm, double *x) {
 
 
 /**
- * Function g() for testing
+ * Function g()
  */
 
 double g(Kernel_SVM *svm, double *x) {
@@ -242,6 +242,65 @@ double g(Kernel_SVM *svm, double *x) {
     int gx;
 
     fx = f(svm, x);
+    if (fx >= 0.0) {
+        gx = 1;
+    } else {
+        gx = -1;
+    }
+
+    return gx;
+}
+
+
+/**
+ * Function f() parallel
+ */
+
+double f_parallel(Kernel_SVM *svm, double *x, int process_offset, int available_processes) {
+
+    // Get the rank of the process
+    int current_process;
+    MPI_Comm_rank(MPI_COMM_WORLD, &current_process);
+
+    int i;
+    double ans = 0.0;
+    double xi[svm->arr_xs_column_size];
+
+    int iters_per_process = (int) (ceil((double) (svm->arr_xs_row_size) / (double) (available_processes)));
+
+    int start = (current_process - process_offset) * iters_per_process;
+    int end = start + iters_per_process;
+
+    double local_ans = 0.0;
+
+    for (i = start; (i < end) && (i < svm->arr_xs_row_size); i++) {
+        get_row(svm->arr_xs, i, svm->arr_xs_column_size, xi);
+        local_ans += svm->arr_alpha_s[i] * svm->arr_ys[i] * svm->K(xi, x, svm->arr_xs_column_size, svm->params);
+    }
+
+    for (i = start; (i < end) && (i < svm->arr_xs_row_size); i++) {
+        get_row(svm->arr_xs_in, i, svm->arr_xs_column_size, xi);
+        local_ans += svm->arr_alpha_s_in[i] * svm->arr_ys_in[i] * svm->K(xi, x, svm->arr_xs_column_size, svm->params);
+    }
+
+    MPI_Allreduce(&local_ans, &ans, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    ans += svm->b;
+
+    return ans;
+}
+
+
+/**
+ * Function g() parallel
+ */
+
+double g_parallel(Kernel_SVM *svm, double *x, int process_offset, int available_processes) {
+
+    double fx;
+    int gx;
+
+    fx = f_parallel(svm, x, process_offset, available_processes);
     if (fx >= 0.0) {
         gx = 1;
     } else {

@@ -1138,7 +1138,7 @@ void parallel_test(Dataset test_data,
 
     svm->correct_c1 = 0;
     for (i = 0; i < c1; i++) {
-        result = (int) g(svm, class1_data + index(i, 0, test_data.predictors_column_number));
+        result = (int) g_parallel(svm, class1_data + index(i, 0, test_data.predictors_column_number), process_offset, available_processes);
         if (result == -1) {
             ++svm->correct_c1;
         }
@@ -1146,7 +1146,7 @@ void parallel_test(Dataset test_data,
 
     svm->correct_c2 = 0;
     for (i = 0; i < c1; i++) {
-        result = (int) g(svm, class2_data + index(i, 0, test_data.predictors_column_number));
+        result = (int) g_parallel(svm, class2_data + index(i, 0, test_data.predictors_column_number), process_offset, available_processes);
         if (result == 1) {
             ++svm->correct_c2;
         }
