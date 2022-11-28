@@ -361,7 +361,7 @@ void tune_linear2(Dataset *df_train,
         parallel_train(*df_train, &svm, params, lr, limit,process_offset,available_processes,false,"",0,eps);
 
         // TODO: change to parallel
-        serial_test(*df_validation, &svm);
+        parallel_test(*df_validation, &svm, process_offset, available_processes);
 
 
         result_table[index(offset + i, 0, result_table_columns)] = params[0];
@@ -418,7 +418,7 @@ void tune_radial2(Dataset *df_train,
             parallel_train(*df_train, &svm, params, lr, limit,process_offset,available_processes,false,"",0,eps);
 
             // TODO: change to parallel
-            serial_test(*df_validation, &svm);
+            parallel_test(*df_validation, &svm, process_offset, available_processes);
 
             result_table[index(offset + i, 0, result_table_columns)] = params[0];
             result_table[index(offset + i, 1, result_table_columns)] = params[1];
@@ -478,7 +478,7 @@ void tune_sigmoid2(Dataset *df_train,
                 parallel_train(*df_train, &svm, params, lr, limit,process_offset,available_processes,false,"",0,eps);
 
                 // TODO: change to parallel
-                serial_test(*df_validation, &svm);
+                parallel_test(*df_validation, &svm, process_offset, available_processes);
 
                 result_table[index(offset + i, 0, result_table_columns)] = params[0];
                 result_table[index(offset + i, 1, result_table_columns)] = params[1];
@@ -542,7 +542,7 @@ void tune_polynomial2(Dataset *df_train,
                     parallel_train(*df_train, &svm, params, lr, limit,process_offset,available_processes,false,"",0,eps);
 
                     // TODO: change to parallel
-                    serial_test(*df_validation, &svm);
+                    parallel_test(*df_validation, &svm, process_offset, available_processes);
 
                     result_table[index(offset + i, 0, result_table_columns)] = params[0];
                     result_table[index(offset + i, 1, result_table_columns)] = params[1];
