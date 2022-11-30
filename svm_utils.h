@@ -1157,7 +1157,8 @@ void parallel_test(Dataset test_data,
     svm->accuracy_c1 = (double) svm->correct_c1 / (double) c1;
     svm->accuracy_c2 = (double) svm->correct_c2 / (double) c2;
 
-    if (svm->verbose) {
+    if ((svm->verbose) && (process_rank == process_offset)) {
+
         std::cout << "\n┌───────────────── Test Results ──────────────────┐" << std::endl;
 
         std::cout << "  Cost: " << svm->params[0] << " | Gamma: " << svm->params[1] << " | Coef0: "

@@ -155,7 +155,7 @@ void print_matrix(T *x, unsigned int rows, unsigned int columns, bool metadata =
 
     for (unsigned int i = 0; i < rows; i++) {
         for (int j = 0; j < columns; j++) {
-            std::cout << x[index(i, j, columns)] << ", ";
+            std::cout << x[index(i, j, columns)] << ",\t";
         }
         std::cout << std::endl;
     }

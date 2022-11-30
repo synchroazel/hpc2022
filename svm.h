@@ -189,7 +189,6 @@ int read_svm(Kernel_SVM *svm, const std::string &path) {
     fread(&svm->params, sizeof(double) * 4, 1, file_to_read);
     fread(&svm->verbose, sizeof(bool), 1, file_to_read);
 
-
     // functions
     char k;
     fread(&k, sizeof(char), 1, file_to_read);
