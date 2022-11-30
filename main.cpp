@@ -1,23 +1,22 @@
 #include <iostream>
 #include <mpi.h>
+#include <boost/program_options.hpp>
+#include <getopt.h>
 
 #include "Dataset.h"
 #include "tune_svm.h"
 #include "read_dataset.h"
 #include "utils.h"
 
-/* Macro to switch modes */
-#define CLI_ARGS false
+#define CLI_ARGS true
 #define IMPLEMENTED_KERNELS 4
 #define NUMBER_OF_HYPER_PARAMETERS 4
 #define NUMBER_OF_PERFORMANCE_CHECKS 15
-
 #define SHOW_LOGTIME true
 #define DEBUG_MAIN false
 
-
-
 #if SHOW_LOGTIME
+
 void logtime() {
 
     int process_rank;
@@ -31,7 +30,7 @@ void logtime() {
     gettimeofday(&tv, nullptr);
 
 
-    millisec = lrint((double)tv.tv_usec / 1000.0); // Round to nearest millisec
+    millisec = lrint((double) tv.tv_usec / 1000.0); // Round to nearest millisec
     if (millisec >= 1000) { // Allow for rounding up to nearest second
 
         millisec -= 1000;
@@ -46,6 +45,7 @@ void logtime() {
     printf("[rank %d at %s.%03ld] ", process_rank, buffer, millisec);
 
 }
+
 #endif
 
 enum train_flag {
@@ -53,15 +53,44 @@ enum train_flag {
 } flag;
 
 
-
 //  TODO:
 //        implement:
-//                  cli args
 //                  open_mp
 //                  mpi logic for train and test
 //        debug:
+//                  debug cli args
 //                  svm test
 
+
+#if CLI_ARGS
+const char *program_name;
+
+void print_usage(FILE *stream, int exit_code) {
+    std::cout << "Usage:  " << program_name << " options [ inputfile ... ]\n"
+              << "  -h  --help               Display this usage information.\n"
+              << "  -l  --logic              Program logic, may be training, testing or tuning.\n"
+              << "  -i  --path1              First input path supplied, may be interpreted as training path or testing path.\n"
+              << "  -I  --path2              Second input path supplied, in tuning logic is interpreted as validation.\n"
+              << "  -t  --target_column      Index of the target column.\n"
+              << "  -c  --columns            Number of columns in the dataset.\n"
+              << "  -r  --row1               Number of rows in the first supplied dataset.\n"
+              << "  -R  --row2               Number of rows in the second supplied dataset.\n"
+              << "  -H  --hparameters_path   Path to the hyperparameters file.\n"
+              << "  -s  --svm_path           Path to the SVM file.\n"
+              << "  -k  --kernel             Kernel type, may be l (linear), polynomial (p), rbf (r) or sigmoid (s).\n"
+              << "  -C  --cost               Cost parameter.\n"
+              << "  -g  --gamma              Gamma parameter.\n"
+              << "  -O  --coef0              Coef0 parameter.\n"
+              << "  -d  --degree             Degree parameter.\n"
+              << "  -T  --learning_rate      Learning rate parameter.\n"
+              << "  -E  --eps                Epsilon parameter.\n"
+              << "  -L  --limit              Limit parameter.\n"
+              << "  -v  --verbose            Print verbose messages.\n"
+              << std::endl;
+    exit(exit_code);
+}
+
+#endif
 
 
 int main(int argc, char *argv[]) {
@@ -70,16 +99,15 @@ int main(int argc, char *argv[]) {
 
     MPI_Init(nullptr, nullptr);  // TODO : check argc & argv
 
-    // Get the number of processes
-    int world_size;
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
     // Get the rank of the process
     int process_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &process_rank);
 
-    /* --------------------------------------------------- */
+    // Get the number of processes
+    int world_size;
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-    int control;
+    /* --------------------------------------------------- */
 
 #if PERFORMANCE_CHECK
 
@@ -95,42 +123,264 @@ int main(int argc, char *argv[]) {
         std::cout << "On this platform, a for loop cycle alone takes an average of " << (end - start) / 1000 << "\n\n";
 
     }
+
     MPI_Barrier(MPI_COMM_WORLD);
 
 #endif
 
+
 #if CLI_ARGS
-    // Initialize the MPI environment
-    MPI_Init(&argc, &argv);
 
-    namespace po = boost::program_options; // reference: https://www.boost.org/doc/libs/1_80_0/doc/html/program_options/tutorial.html
-    // Declare the supported options.
-    po::options_description desc("Allowed options");
-    desc.add_options()
-            ("help", "produce help message")
-            ("file_path", po::value<std::string>(), "csv file path")
-            ("separator", po::value<std::string>(), "csv file separator")
-            ("rows", po::value<int>(), "csv rows")
-            ("columns", po::value<int>(), "csv columns")
-            //TODO: add others
-            ;
+    int next_option;
 
-    po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
+    /* A string listing valid short options letters. */
+    const char *const short_options = "hl:i:I:t:c:r:R:H:s:k:C:g:O:d:T:E:L:v";
 
-    //TODO: modify this part
-    if (vm.count("help")) {
-        cout << desc << "\n";
-        return 1;
-    }
+    /* An array describing valid long options.  */
+    const struct option long_options[] = {
+            {"help",             0, NULL, 'h'},
+            {"logic",            0, NULL, 'l'},
+            {"path1",            0, NULL, 'i'},
+            {"path2",            0, NULL, 'I'},
+            {"target_column",    0, NULL, 't'},
+            {"columns",          0, NULL, 'c'},
+            {"row1",             0, NULL, 'r'},
+            {"row2",             0, NULL, 'R'},
+            {"hparameters_path", 0, NULL, 'H'},
+            {"svm_path",         0, NULL, 's'},
+            {"kernel",           0, NULL, 'k'},
+            {"cost",             0, NULL, 'C'},
+            {"gamma",            0, NULL, 'g'},
+            {"coef0",            0, NULL, 'O'},
+            {"degree",           0, NULL, 'd'},
+            {"learning_rate",    0, NULL, 'T'},
+            {"eps",              0, NULL, 'E'},
+            {"limit",            0, NULL, 'L'},
+            {"verbose",          0, NULL, 'v'},
+            {NULL,               0, NULL, 0}
+    };
 
-    if (vm.count("compression")) {
-        cout << "Compression level was set to "
-             << vm["compression"].as<int>() << ".\n";
-    } else {
-        cout << "Compression level was not set.\n";
-    }
+    /**
+     * Parameters initialization
+     */
+
+    bool tuning_logic = false;
+
+    std::string filepath_training;
+    std::string filepath_validation;
+    std::string filepath_testing;
+    std::string filepath_svm;
+
+    int rows_t = 0;
+    int rows_v = 0;
+    int target_column = 0;
+    int columns = 0;
+
+    std::string hparameters_path;  // TODO : implement
+    std::string save_dir_path = "/home/azel/Developer/hpc2022/saved_svm";  // TODO : what to do with this???
+
+    char ker_type = '\0';
+    double Cost = 0.0;
+    double gamma = 0.0;
+    double coef0 = 0.0;
+    double degree = 0.0;
+    double lr = 0.0;
+    double limit = 0.01;
+    double eps = DEFAULT_EPS;
+
+    int verbose = 0;
+
+    program_name = argv[0];
+
+
+    /**
+     * CLI arguments parsing
+     */
+
+
+    do {
+
+        next_option = getopt_long(argc, argv, short_options, long_options, NULL);
+
+        switch (next_option) {
+
+            case 'h':   /* -h or --help */
+                print_usage(stdout, 0);
+
+            case 'l':   /* -l or --logic */
+                if (strcmp(optarg, "training") == 0) {
+                    flag == training;
+                    logtime();
+                    std::cout << "[INFO] Logic set to training." << std::endl;
+                } else if (strcmp(optarg, "testing") == 0) {
+                    flag = testing;
+                    logtime();
+                    std::cout << "[INFO] Logic set to training." << std::endl;
+                } else if (strcmp(optarg, "tuning") == 0) {
+                    flag = tuning;
+                    logtime();
+                    std::cout << "[INFO] Logic set to training." << std::endl;
+                } else {
+                    logtime();
+                    std::cout << "[ERROR] Invalid logic argument, please use training, testing or tuning.\n";
+                    print_usage(stdout, 0);
+                }
+                break;
+
+            case 'i':   /* -i or --path1 */
+                if ((flag == training) || (flag == tuning)) {
+                    filepath_training = optarg;
+                    logtime();
+                    std::cout << "[INFO] Training file path set to " << filepath_training << std::endl;
+                } else if (flag == testing) {
+                    filepath_validation = optarg;
+                    logtime();
+                    std::cout << "[INFO] Testing file path set to " << filepath_validation << std::endl;
+                } else {
+                    logtime();
+                    std::cout << "[ERROR] Something went wrong setting dataset path.\n";
+                    print_usage(stdout, 0);
+                }
+                break;
+
+            case 'I':   /* -I or --path2 */
+                if (flag == tuning) {
+                    filepath_validation = optarg;
+                    logtime();
+                    std::cout << "[INFO] Validation file path set to " << filepath_validation << std::endl;
+                } else {
+                    logtime();
+                    std::cout << "[ERROR] Training and testing logics only require 1 dataset path argument.\n";
+                    print_usage(stdout, 0);
+                }
+                break;
+
+            case 't':   /* -t or --target_column */
+                target_column = std::atoi(optarg);
+                logtime();
+                std::cout << "[INFO] Target column set to " << target_column << std::endl;
+                break;
+
+            case 'c':   /* -c or --columns */
+                columns = std::atoi(optarg);
+                logtime();
+                std::cout << "[INFO] Number of columns set to " << columns << std::endl;
+                break;
+
+            case 'r':   /* -r or --row1 */
+
+                if ((flag == training) || (flag == tuning)) {
+                    rows_t = std::atoi(optarg);
+                    logtime();
+                    std::cout << "[INFO] Number of rows for training dataset set to " << rows_t << std::endl;
+                } else if (flag == testing) {
+                    rows_v = std::atoi(optarg);
+                    logtime();
+                    std::cout << "[INFO] Number of rows for testing dataset set to " << rows_v << std::endl;
+                } else {
+                    logtime();
+                    std::cout << "[ERROR] Something went wrong setting rows number.\n";
+                    print_usage(stdout, 0);
+                }
+
+                break;
+
+            case 'R':   /* -R or --row2 */
+
+                if (flag == tuning) {
+                    rows_v = std::atoi(optarg);
+                    logtime();
+                    std::cout << "[INFO] Number of rows for validation dataset set to " << rows_t << std::endl;
+                } else {
+                    logtime();
+                    std::cout << "[ERROR] Training and testing logics only require 1 rows number argument.\n";
+                    print_usage(stdout, 0);
+                }
+
+                break;
+
+            case 'H':   /* -H or --hparameters_path */
+                // hparameters_path = optarg;
+                // TODO : implement me
+                break;
+
+            case 's':   /* -s or --svm_path */
+                filepath_svm = optarg;
+                logtime();
+                std::cout << "[INFO] SVM file path set to " << filepath_svm << std::endl;
+                break;
+
+            case 'k':   /* -k or --kernel */
+                ker_type = *optarg;
+                logtime();
+                std::cout << "[INFO] Kernel type set to `" << ker_type << "`" << std::endl;
+                break;
+
+            case 'C':   /* -C or --cost */
+                Cost = std::stoi(optarg);
+                logtime();
+                std::cout << "[INFO] Cost parameter set to " << Cost << std::endl;
+                break;
+
+            case 'g':   /* -g or --gamma */
+                gamma = std::stoi(optarg);
+                logtime();
+                std::cout << "[INFO] Gamma parameter set to " << gamma << std::endl;
+                break;
+
+            case 'O':   /* -O or --coef0 */
+                coef0 = std::stoi(optarg);
+                logtime();
+                std::cout << "[INFO] Coef0 parameter set to " << coef0 << std::endl;
+                break;
+
+            case 'd':   /* -d or --degree */
+                degree = std::stoi(optarg);
+                logtime();
+                std::cout << "[INFO] Degree parameter set to " << degree << std::endl;
+                break;
+
+            case 'T':   /* -T or --learning_rate */
+                lr = std::stoi(optarg);
+                logtime();
+                std::cout << "[INFO] Learning rate set to " << lr << std::endl;
+                break;
+
+            case 'E':   /* -E or --eps */
+                eps = std::stoi(optarg);
+                logtime();
+                std::cout << "[INFO] Epsilon set to " << eps << std::endl;
+                break;
+
+            case 'L':   /* -L or --limit */
+                limit = std::stoi(optarg);
+                logtime();
+                std::cout << "[INFO] Limit value set to " << limit << std::endl;
+                break;
+
+            case 'v':   /* -v or --verbose */
+                verbose = 1;
+                break;
+
+            case '?':   /* The user specified an invalid option */
+                logtime();
+                std::cout << "\n[WARN] You entered an invalid option." << std::endl;
+                print_usage(stderr, 1);
+
+            case -1:    /* Done with options */
+                break;
+
+            default:    /* Something else unexpected */
+                abort();
+
+        }
+
+    } while (next_option != -1);
+
+    logtime();
+    std::cout << "[INFO] Cli arguments successfully parsed.\n" << std::endl;
+
+
 #else
 
     /**
@@ -172,12 +422,10 @@ int main(int argc, char *argv[]) {
 
     const double eps = DEFAULT_EPS;
 
-
-
 #endif
 
-#if PERFORMANCE_CHECK
 
+#if PERFORMANCE_CHECK
 
     /**
      * Program startup
@@ -199,7 +447,7 @@ int main(int argc, char *argv[]) {
 #endif
 
     /**
-     * Switch start
+     * Switch block begins
      */
 
 
@@ -282,7 +530,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 
-            parallel_train(df_train, &svm, params, lr, limit,MASTER_PROCESS, world_size, true, save_dir_path, 0, eps);
+            parallel_train(df_train, &svm, params, lr, limit, MASTER_PROCESS, world_size, true, save_dir_path, 0, eps);
 
 #if PERFORMANCE_CHECK
 
@@ -306,7 +554,7 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        /// Testing case
+            /// Testing case
 
         case train_flag::testing: {
 
@@ -328,7 +576,7 @@ int main(int argc, char *argv[]) {
 
         }
 
-        /// Tuning case
+            /// Tuning case
 
         case train_flag::tuning: {
 
@@ -350,14 +598,14 @@ int main(int argc, char *argv[]) {
 
 #if CLI_ARGS
 
-            double* cost_array;
-            double* gamma_array;
-            double* coef0_array;
-            double* degree_array;
+            double *cost_array;
+            double *gamma_array;
+            double *coef0_array;
+            double *degree_array;
 
             int cost_array_size = 0, gamma_array_size = 0, coef0_array_size = 0, degree_array_size = 0;
 
-            read_hyperparameters(filepath_hyperparameters, cost_array, &cost_array_size, gamma_array, &gamma_array_size, coef0_array, &coef0_array_size, degree_array, &degree_array_size);
+            // read_hyperparameters(filepath_hyperparameters, cost_array, &cost_array_size, gamma_array, &gamma_array_size, coef0_array, &coef0_array_size, degree_array, &degree_array_size);
 
 #else
 
@@ -454,7 +702,7 @@ int main(int argc, char *argv[]) {
 
             int tuning_table_rows = linear_rows + radial_rows + sigmoid_rows + polynomial_rows;
             int tuning_table_columns = NUMBER_OF_HYPER_PARAMETERS + 1/* accuracy*/ + 1/*class 1 accuracy*/ +
-                                          1/*class 2 accuracy*/; // NB: type of kernel will be printed separately
+                                       1/*class 2 accuracy*/; // NB: type of kernel will be printed separately
             if (process_rank == MASTER_PROCESS) {
                 std::cout << "There are a total of " << IMPLEMENTED_KERNELS << " kernels to tune." << std::endl;
                 std::cout << "Tuning will use:\n\t " << cost_array_size << " different costs, " << std::endl;
@@ -539,7 +787,9 @@ int main(int argc, char *argv[]) {
                 if (process_rank == MASTER_PROCESS) {
                     std::cout << "Starting sigmoid tuning" << std::endl;
                 }
-                tune_sigmoid(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size, local_tuning_table, linear_rows + radial_rows, tuning_table_columns, MASTER_PROCESS, world_size);
+                tune_sigmoid(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,
+                             coef0_array, coef0_array_size, local_tuning_table, linear_rows + radial_rows,
+                             tuning_table_columns, MASTER_PROCESS, world_size);
                 std::cout << "Process " << process_rank << " has finished sigmoid tuning" << std::endl;
                 //polynomial
 
@@ -667,7 +917,9 @@ int main(int argc, char *argv[]) {
                 if (process_rank == MASTER_PROCESS) {
                     std::cout << "Starting sigmoid tuning" << std::endl;
                 }
-                tune_sigmoid2(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size, coef0_array, coef0_array_size, local_tuning_table, linear_rows + radial_rows, tuning_table_columns, MASTER_PROCESS, world_size);
+                tune_sigmoid2(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,
+                              coef0_array, coef0_array_size, local_tuning_table, linear_rows + radial_rows,
+                              tuning_table_columns, MASTER_PROCESS, world_size);
                 std::cout << "Process " << process_rank << " has finished sigmoid tuning" << std::endl;
                 //polynomial
 
@@ -733,20 +985,19 @@ int main(int argc, char *argv[]) {
             if (process_rank == MASTER_PROCESS) {
 
 
-
                 print_matrix(local_tuning_table, tuning_table_rows, tuning_table_columns);
 
 
 
                 // todo: revise selection logic
-                auto* accuracies = (double *) calloc(tuning_table_rows, sizeof(double ));
+                auto *accuracies = (double *) calloc(tuning_table_rows, sizeof(double));
                 get_column(local_tuning_table, NUMBER_OF_HYPER_PARAMETERS, tuning_table_columns, tuning_table_rows,
                            accuracies);
                 auto *m = std::max_element(accuracies, accuracies + tuning_table_rows);
                 int row_index = (int) (m - accuracies);
                 double max_accuracy = *m;
                 std::cout << "Best Accuracy: " << max_accuracy << std::endl;
-                auto* best_row = (double *) calloc(tuning_table_columns, sizeof(double ));
+                auto *best_row = (double *) calloc(tuning_table_columns, sizeof(double));
                 get_row(local_tuning_table, row_index, tuning_table_columns, best_row);
 
 
@@ -755,13 +1006,13 @@ int main(int argc, char *argv[]) {
 
                 char out_kernel;
 
-                if(row_index < linear_rows){
+                if (row_index < linear_rows) {
                     out_kernel = 'l';
-                } else if(row_index < linear_rows + radial_rows) {
+                } else if (row_index < linear_rows + radial_rows) {
                     out_kernel = 'r';
-                } else if(row_index < linear_rows + radial_rows + sigmoid_rows ) {
+                } else if (row_index < linear_rows + radial_rows + sigmoid_rows) {
                     out_kernel = 's';
-                } else if(row_index < linear_rows + radial_rows + sigmoid_rows + polynomial_rows ){
+                } else if (row_index < linear_rows + radial_rows + sigmoid_rows + polynomial_rows) {
                     out_kernel = 'p';
                 } else {
                     out_kernel = -1;
@@ -783,7 +1034,7 @@ int main(int argc, char *argv[]) {
                         std::cout << "\tPolynomial ";
                         break;
                     }
-                    default:{
+                    default: {
                         std::cout << "\tError from the code, contact the developer!";
                         exit(2);
                     }
@@ -801,7 +1052,6 @@ int main(int argc, char *argv[]) {
         }
 
     }
-
 
 
 #if PERFORMANCE_CHECK
