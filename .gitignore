@@ -13,6 +13,7 @@ mpi_*
 **/*.bak*
 **/*.dat
 **/*.svm
+results.txt
 
 ### CVS template
 /CVS/*
