@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.23)
 project(hpc2022)
 
 set(CMAKE_CXX_STANDARD 14)
+
 # Add MPI Package to Project
 find_package(MPI REQUIRED)
 
@@ -14,3 +15,4 @@ target_link_libraries(hpc2022 PUBLIC MPI::MPI_CXX)
 include_directories("/opt/homebrew/include")
 include_directories("/opt/homebrew/Cellar/libomp/15.0.5/include")
 
+add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)

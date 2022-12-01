@@ -1,12 +1,13 @@
 #include <iostream>
 #include <mpi.h>
-#include <boost/program_options.hpp>
 #include <getopt.h>
+#include <sys/time.h>
+#include <math.h>
 
 #include "Dataset.h"
 #include "tune_svm.h"
 #include "read_dataset.h"
-#include "utils.h"
+
 
 #define CLI_ARGS true
 #define IMPLEMENTED_KERNELS 4
@@ -14,6 +15,7 @@
 #define NUMBER_OF_PERFORMANCE_CHECKS 15
 #define SHOW_LOGTIME true
 #define DEBUG_MAIN false
+#define MAX_HP_VALUES 10
 
 #if SHOW_LOGTIME
 
@@ -69,6 +71,7 @@ void print_usage(FILE *stream, int exit_code) {
     std::cout << "Usage:  " << program_name << " options [ inputfile ... ]\n"
               << "  -h  --help               Display this usage information.\n"
               << "  -l  --logic              Program logic, may be training, testing or tuning.\n"
+              << "  -p  --parallel-tuning    Set tuning logic to parallel (default is split).\n"
               << "  -i  --path1              First input path supplied, may be interpreted as training path or testing path.\n"
               << "  -I  --path2              Second input path supplied, in tuning logic is interpreted as validation.\n"
               << "  -t  --target_column      Index of the target column.\n"
@@ -91,7 +94,6 @@ void print_usage(FILE *stream, int exit_code) {
 }
 
 #endif
-
 
 int main(int argc, char *argv[]) {
 
@@ -140,6 +142,7 @@ int main(int argc, char *argv[]) {
     const struct option long_options[] = {
             {"help",             0, NULL, 'h'},
             {"logic",            0, NULL, 'l'},
+            {"parallel-tuning",  0, NULL, 'p'},
             {"path1",            0, NULL, 'i'},
             {"path2",            0, NULL, 'I'},
             {"target_column",    0, NULL, 't'},
@@ -176,7 +179,8 @@ int main(int argc, char *argv[]) {
     int target_column = 0;
     int columns = 0;
 
-    std::string hparameters_path;  // TODO : implement
+    std::string hparameters_path;
+
     std::string save_dir_path = "/home/azel/Developer/hpc2022/saved_svm";  // TODO : what to do with this???
 
     char ker_type = '\0';
@@ -197,189 +201,261 @@ int main(int argc, char *argv[]) {
      * CLI arguments parsing
      */
 
+    {
 
-    do {
+        do {
 
-        next_option = getopt_long(argc, argv, short_options, long_options, NULL);
+            next_option = getopt_long(argc, argv, short_options, long_options, NULL);
 
-        switch (next_option) {
+            switch (next_option) {
 
-            case 'h':   /* -h or --help */
-                print_usage(stdout, 0);
-
-            case 'l':   /* -l or --logic */
-                if (strcmp(optarg, "training") == 0) {
-                    flag == training;
-                    logtime();
-                    std::cout << "[INFO] Logic set to training." << std::endl;
-                } else if (strcmp(optarg, "testing") == 0) {
-                    flag = testing;
-                    logtime();
-                    std::cout << "[INFO] Logic set to training." << std::endl;
-                } else if (strcmp(optarg, "tuning") == 0) {
-                    flag = tuning;
-                    logtime();
-                    std::cout << "[INFO] Logic set to training." << std::endl;
-                } else {
-                    logtime();
-                    std::cout << "[ERROR] Invalid logic argument, please use training, testing or tuning.\n";
+                case 'h':   /* -h or --help */
                     print_usage(stdout, 0);
-                }
-                break;
 
-            case 'i':   /* -i or --path1 */
-                if ((flag == training) || (flag == tuning)) {
-                    filepath_training = optarg;
+                case 'l':   /* -l or --logic */
+                    if (strcmp(optarg, "training") == 0) {
+                        // flag == training;  // unnecessary
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Logic set to training." << std::endl;
+                    } else if (strcmp(optarg, "testing") == 0) {
+                        flag = testing;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Logic set to training." << std::endl;
+                    } else if (strcmp(optarg, "tuning") == 0) {
+                        flag = tuning;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Logic set to training." << std::endl;
+                    } else {
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[ERROR] Invalid logic argument, please use training, testing or tuning.\n";
+                        print_usage(stdout, 0);
+                    }
+                    break;
+
+                case 'p':   /* -p or --parallel-tuning */
+                    tuning_logic = true;
+                    if (tuning_logic == true) {
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout
+                                << "[INFO] Tuning logic set to parallel. All processes will go through parallel training.\n";
+                    } else {
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout
+                                << "[INFO] Tuning logic set to split by default. Processes will split the available combination.\n";
+                    }
+                    break;
+
+                case 'i':   /* -i or --path1 */
+                    if ((flag == training) || (flag == tuning)) {
+                        filepath_training = optarg;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Training file path set to " << filepath_training << std::endl;
+                    } else if (flag == testing) {
+                        filepath_validation = optarg;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Testing file path set to " << filepath_validation << std::endl;
+                    } else {
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[ERROR] Something went wrong setting dataset path.\n";
+                        print_usage(stdout, 0);
+                    }
+                    break;
+
+                case 'I':   /* -I or --path2 */
+                    if (flag == tuning) {
+                        filepath_validation = optarg;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Validation file path set to " << filepath_validation << std::endl;
+                    } else {
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[ERROR] Training and testing logics only require 1 dataset path argument.\n";
+                        print_usage(stdout, 0);
+                    }
+                    break;
+
+                case 't':   /* -t or --target_column */
+                    target_column = std::atoi(optarg);
+#if SHOW_LOGTIME
                     logtime();
-                    std::cout << "[INFO] Training file path set to " << filepath_training << std::endl;
-                } else if (flag == testing) {
-                    filepath_validation = optarg;
+#endif
+                    std::cout << "[INFO] Target column set to " << target_column << std::endl;
+                    break;
+
+                case 'c':   /* -c or --columns */
+                    columns = std::atoi(optarg);
+#if SHOW_LOGTIME
                     logtime();
-                    std::cout << "[INFO] Testing file path set to " << filepath_validation << std::endl;
-                } else {
+#endif
+                    std::cout << "[INFO] Number of columns set to " << columns << std::endl;
+                    break;
+
+                case 'r':   /* -r or --row1 */
+
+                    if ((flag == training) || (flag == tuning)) {
+                        rows_t = std::atoi(optarg);
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Number of rows for training dataset set to " << rows_t << std::endl;
+                    } else if (flag == testing) {
+                        rows_v = std::atoi(optarg);
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Number of rows for testing dataset set to " << rows_v << std::endl;
+                    } else {
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[ERROR] Something went wrong setting rows number.\n";
+                        print_usage(stdout, 0);
+                    }
+
+                    break;
+
+                case 'R':   /* -R or --row2 */
+
+                    if (flag == tuning) {
+                        rows_v = std::atoi(optarg);
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Number of rows for validation dataset set to " << rows_t << std::endl;
+                    } else {
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[ERROR] Training and testing logics only require 1 rows number argument.\n";
+                        print_usage(stdout, 0);
+                    }
+
+                    break;
+
+                case 'H':   /* -H or --hparameters_path */
+                    hparameters_path = optarg;
+                    break;
+
+                case 's':   /* -s or --svm_path */
+                    filepath_svm = optarg;
+#if SHOW_LOGTIME
                     logtime();
-                    std::cout << "[ERROR] Something went wrong setting dataset path.\n";
-                    print_usage(stdout, 0);
-                }
-                break;
+#endif
+                    std::cout << "[INFO] SVM file path set to " << filepath_svm << std::endl;
+                    break;
 
-            case 'I':   /* -I or --path2 */
-                if (flag == tuning) {
-                    filepath_validation = optarg;
+                case 'k':   /* -k or --kernel */
+                    ker_type = *optarg;
+#if SHOW_LOGTIME
                     logtime();
-                    std::cout << "[INFO] Validation file path set to " << filepath_validation << std::endl;
-                } else {
+#endif
+                    std::cout << "[INFO] Kernel type set to `" << ker_type << "`" << std::endl;
+                    break;
+
+                case 'C':   /* -C or --cost */
+                    Cost = std::stoi(optarg);
+#if SHOW_LOGTIME
                     logtime();
-                    std::cout << "[ERROR] Training and testing logics only require 1 dataset path argument.\n";
-                    print_usage(stdout, 0);
-                }
-                break;
+#endif
+                    std::cout << "[INFO] Cost parameter set to " << Cost << std::endl;
+                    break;
 
-            case 't':   /* -t or --target_column */
-                target_column = std::atoi(optarg);
-                logtime();
-                std::cout << "[INFO] Target column set to " << target_column << std::endl;
-                break;
-
-            case 'c':   /* -c or --columns */
-                columns = std::atoi(optarg);
-                logtime();
-                std::cout << "[INFO] Number of columns set to " << columns << std::endl;
-                break;
-
-            case 'r':   /* -r or --row1 */
-
-                if ((flag == training) || (flag == tuning)) {
-                    rows_t = std::atoi(optarg);
+                case 'g':   /* -g or --gamma */
+                    gamma = std::stoi(optarg);
+#if SHOW_LOGTIME
                     logtime();
-                    std::cout << "[INFO] Number of rows for training dataset set to " << rows_t << std::endl;
-                } else if (flag == testing) {
-                    rows_v = std::atoi(optarg);
+#endif
+                    std::cout << "[INFO] Gamma parameter set to " << gamma << std::endl;
+                    break;
+
+                case 'O':   /* -O or --coef0 */
+                    coef0 = std::stoi(optarg);
+#if SHOW_LOGTIME
                     logtime();
-                    std::cout << "[INFO] Number of rows for testing dataset set to " << rows_v << std::endl;
-                } else {
+#endif
+                    std::cout << "[INFO] Coef0 parameter set to " << coef0 << std::endl;
+                    break;
+
+                case 'd':   /* -d or --degree */
+                    degree = std::stoi(optarg);
+#if SHOW_LOGTIME
                     logtime();
-                    std::cout << "[ERROR] Something went wrong setting rows number.\n";
-                    print_usage(stdout, 0);
-                }
+#endif
+                    std::cout << "[INFO] Degree parameter set to " << degree << std::endl;
+                    break;
 
-                break;
-
-            case 'R':   /* -R or --row2 */
-
-                if (flag == tuning) {
-                    rows_v = std::atoi(optarg);
+                case 'T':   /* -T or --learning_rate */
+                    lr = std::stoi(optarg);
+#if SHOW_LOGTIME
                     logtime();
-                    std::cout << "[INFO] Number of rows for validation dataset set to " << rows_t << std::endl;
-                } else {
+#endif
+                    std::cout << "[INFO] Learning rate set to " << lr << std::endl;
+                    break;
+
+                case 'E':   /* -E or --eps */
+                    eps = std::stoi(optarg);
+#if SHOW_LOGTIME
                     logtime();
-                    std::cout << "[ERROR] Training and testing logics only require 1 rows number argument.\n";
-                    print_usage(stdout, 0);
-                }
+#endif
+                    std::cout << "[INFO] Epsilon set to " << eps << std::endl;
+                    break;
 
-                break;
+                case 'L':   /* -L or --limit */
+                    limit = std::stoi(optarg);
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Limit value set to " << limit << std::endl;
+                    break;
 
-            case 'H':   /* -H or --hparameters_path */
-                // hparameters_path = optarg;
-                // TODO : implement me
-                break;
+                case 'v':   /* -v or --verbose */
+                    verbose = 1;
+                    break;
 
-            case 's':   /* -s or --svm_path */
-                filepath_svm = optarg;
-                logtime();
-                std::cout << "[INFO] SVM file path set to " << filepath_svm << std::endl;
-                break;
+                case '?':   /* The user specified an invalid option */
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "\n[WARN] You entered an invalid option." << std::endl;
+                    print_usage(stderr, 1);
 
-            case 'k':   /* -k or --kernel */
-                ker_type = *optarg;
-                logtime();
-                std::cout << "[INFO] Kernel type set to `" << ker_type << "`" << std::endl;
-                break;
+                case -1:    /* Done with options */
+                    break;
 
-            case 'C':   /* -C or --cost */
-                Cost = std::stoi(optarg);
-                logtime();
-                std::cout << "[INFO] Cost parameter set to " << Cost << std::endl;
-                break;
+                default:    /* Something else unexpected */
+                    abort();
 
-            case 'g':   /* -g or --gamma */
-                gamma = std::stoi(optarg);
-                logtime();
-                std::cout << "[INFO] Gamma parameter set to " << gamma << std::endl;
-                break;
+            }
 
-            case 'O':   /* -O or --coef0 */
-                coef0 = std::stoi(optarg);
-                logtime();
-                std::cout << "[INFO] Coef0 parameter set to " << coef0 << std::endl;
-                break;
+        } while (next_option != -1);
 
-            case 'd':   /* -d or --degree */
-                degree = std::stoi(optarg);
-                logtime();
-                std::cout << "[INFO] Degree parameter set to " << degree << std::endl;
-                break;
+#if SHOW_LOGTIME
+        logtime();
+#endif
+        std::cout << "[INFO] Cli arguments successfully parsed.\n" << std::endl;
 
-            case 'T':   /* -T or --learning_rate */
-                lr = std::stoi(optarg);
-                logtime();
-                std::cout << "[INFO] Learning rate set to " << lr << std::endl;
-                break;
-
-            case 'E':   /* -E or --eps */
-                eps = std::stoi(optarg);
-                logtime();
-                std::cout << "[INFO] Epsilon set to " << eps << std::endl;
-                break;
-
-            case 'L':   /* -L or --limit */
-                limit = std::stoi(optarg);
-                logtime();
-                std::cout << "[INFO] Limit value set to " << limit << std::endl;
-                break;
-
-            case 'v':   /* -v or --verbose */
-                verbose = 1;
-                break;
-
-            case '?':   /* The user specified an invalid option */
-                logtime();
-                std::cout << "\n[WARN] You entered an invalid option." << std::endl;
-                print_usage(stderr, 1);
-
-            case -1:    /* Done with options */
-                break;
-
-            default:    /* Something else unexpected */
-                abort();
-
-        }
-
-    } while (next_option != -1);
-
-    logtime();
-    std::cout << "[INFO] Cli arguments successfully parsed.\n" << std::endl;
-
+    }
 
 #else
 
@@ -564,9 +640,7 @@ int main(int argc, char *argv[]) {
 
             Kernel_SVM svm;
 
-            std::string saved_model_path = filepath_svm;
-
-            read_svm(&svm, saved_model_path);
+            read_svm(&svm, filepath_svm);
 
             svm.verbose = true;
 
@@ -603,9 +677,47 @@ int main(int argc, char *argv[]) {
             double *coef0_array;
             double *degree_array;
 
+            cost_array = (double *) malloc(sizeof(double) * MAX_HP_VALUES);
+            gamma_array = (double *) malloc(sizeof(double) * MAX_HP_VALUES);
+            coef0_array = (double *) malloc(sizeof(double) * MAX_HP_VALUES);
+            degree_array = (double *) malloc(sizeof(double) * MAX_HP_VALUES);
+
             int cost_array_size = 0, gamma_array_size = 0, coef0_array_size = 0, degree_array_size = 0;
 
-            // read_hyperparameters(filepath_hyperparameters, cost_array, &cost_array_size, gamma_array, &gamma_array_size, coef0_array, &coef0_array_size, degree_array, &degree_array_size);
+            read_hyperparameters(hparameters_path,
+                                 cost_array, cost_array_size,
+                                 gamma_array, gamma_array_size,
+                                 coef0_array, coef0_array_size,
+                                 degree_array, degree_array_size);
+
+
+            if (process_rank == MASTER_PROCESS) {
+
+                std::cout << "\n\nCost array size: " << cost_array_size << std::endl;
+                std::cout << "Cost array: " << std::endl;
+                for (int i = 0; i < cost_array_size; ++i) {
+                    std::cout << cost_array[i] << " ";
+                }
+
+                std::cout << "\n\nGamma array size: " << gamma_array_size << std::endl;
+                std::cout << "Gamma array: " << std::endl;
+                for (int i = 0; i < gamma_array_size; ++i) {
+                    std::cout << gamma_array[i] << " ";
+                }
+
+                std::cout << "\n\nCoef0 array size: " << coef0_array_size << std::endl;
+                std::cout << "Coef0 array: " << std::endl;
+                for (int i = 0; i < coef0_array_size; ++i) {
+                    std::cout << coef0_array[i] << " ";
+                }
+
+                std::cout << "\n\nDegree array size: " << degree_array_size << std::endl;
+                std::cout << "Degree array: " << std::endl;
+                for (int i = 0; i < degree_array_size; ++i) {
+                    std::cout << degree_array[i] << " ";
+                }
+
+            }
 
 #else
 
@@ -984,11 +1096,6 @@ int main(int argc, char *argv[]) {
             }
             if (process_rank == MASTER_PROCESS) {
 
-
-                print_matrix(local_tuning_table, tuning_table_rows, tuning_table_columns);
-
-
-
                 // todo: revise selection logic
                 auto *accuracies = (double *) calloc(tuning_table_rows, sizeof(double));
                 get_column(local_tuning_table, NUMBER_OF_HYPER_PARAMETERS, tuning_table_columns, tuning_table_rows,
@@ -1064,7 +1171,9 @@ int main(int argc, char *argv[]) {
         logtime();
 #endif
         std::cout << "Program ends at time " << *(time_checks + time_iterator) << std::endl;
-
+#if SHOW_LOGTIME
+        logtime();
+#endif
         std::cout << "Last step took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                   << " seconds\n" << std::endl;
     }

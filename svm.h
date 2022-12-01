@@ -7,6 +7,11 @@
 
 #include <string>
 #include <cstdio>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
+
 #include "Dataset.h"
 
 
@@ -104,7 +109,7 @@ int save_svm(const Kernel_SVM *svm, const std::string &path) {
     file_to_write = fopen(path.c_str(), "wb");
 
     if (!file_to_write) {
-        std::cout << "Error opening file. Saving was not possible !";
+        std::cout << "Error opening file. Saving was not possible!";
         return 1;
     }
 
@@ -204,6 +209,61 @@ void log(const std::string &str) {
     std::cout << str << " " << std::flush;
 
 }
+
+/**
+ * Read hyperparameters
+ */
+
+void read_hyperparameters(const std::string &filepath,
+                          double *cost_array, int &cost_array_size,
+                          double *gamma_array, int &gamma_array_size,
+                          double *coef0_array, int &coef0_array_size,
+                          double *degree_array, int &degree_array_size) {
+
+    boost::property_tree::ptree tree;
+    boost::property_tree::json_parser::read_json(filepath, tree);
+
+    std::string cost_values = tree.get<std::string>("cost");
+    std::string gamma_values = tree.get<std::string>("gamma");
+    std::string coef0_values = tree.get<std::string>("coef0");
+    std::string degree_values = tree.get<std::string>("degree");
+
+    cost_array_size = count(cost_values.begin(), cost_values.end(), ',') + 1;
+    gamma_array_size = count(gamma_values.begin(), gamma_values.end(), ',') + 1;
+    coef0_array_size = count(coef0_values.begin(), coef0_values.end(), ',') + 1;
+    degree_array_size = count(degree_values.begin(), degree_values.end(), ',') + 1;
+
+    cost_array = (double *) realloc(cost_array, cost_array_size * sizeof(double));
+    gamma_array = (double *) realloc(gamma_array, gamma_array_size * sizeof(double));
+    coef0_array = (double *) realloc(coef0_array, coef0_array_size * sizeof(double));
+    degree_array = (double *) realloc(degree_array, degree_array_size * sizeof(double));
+
+    std::vector<std::string> cost_vector;
+    std::vector<std::string> gamma_vector;
+    std::vector<std::string> coef0_vector;
+    std::vector<std::string> degree_vector;
+
+    boost::split(cost_vector, cost_values, boost::is_any_of(", "), boost::token_compress_on);
+    boost::split(gamma_vector, gamma_values, boost::is_any_of(", "), boost::token_compress_on);
+    boost::split(coef0_vector, coef0_values, boost::is_any_of(", "), boost::token_compress_on);
+    boost::split(degree_vector, degree_values, boost::is_any_of(", "), boost::token_compress_on);
+
+    for (int i = 0; i < cost_array_size; i++) {
+        cost_array[i] = std::stod(cost_vector[i]);
+    }
+
+    for (int i = 0; i < gamma_array_size; i++) {
+        gamma_array[i] = std::stod(gamma_vector[i]);
+    }
+
+    for (int i = 0; i < coef0_array_size; i++) {
+        coef0_array[i] = std::stod(coef0_vector[i]);
+    }
+
+    for (int i = 0; i < degree_array_size; i++) {
+        degree_array[i] = std::stod(degree_vector[i]);
+    }
+};
 
 
 /**
