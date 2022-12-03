@@ -1,9 +1,8 @@
 #include <iostream>
 #include <mpi.h>
 #include <getopt.h>
-#include <sys/time.h>
 #include <cmath>
-
+#include "utils.h"
 #include "Dataset.h"
 #include "tune_svm.h"
 #include "read_dataset.h"
@@ -12,7 +11,7 @@
 #define CLI_ARGS true
 #define IMPLEMENTED_KERNELS 4
 #define NUMBER_OF_HYPER_PARAMETERS 4
-#define NUMBER_OF_PERFORMANCE_CHECKS 15
+#define NUMBER_OF_PERFORMANCE_CHECKS 20
 #define SHOW_LOGTIME true
 #define DEBUG_MAIN false
 #define MAX_HP_VALUES 20 // HP are hyperparameters, not health points
@@ -35,40 +34,6 @@ std::string read_env_var(const std::string& name){
 }
 
 // TODO: what about boost bint? wth?
-#if SHOW_LOGTIME
-
-void logtime() {
-
-    int process_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &process_rank);
-
-    char buffer[26];
-    long millisec;
-    struct tm *tm_info;
-    struct timeval tv;
-
-    gettimeofday(&tv, nullptr);
-
-
-    millisec = lrint((double) tv.tv_usec / 1000.0); // Round to nearest millisec
-    if (millisec >= 1000) { // Allow for rounding up to nearest second
-
-        millisec -= 1000;
-        tv.tv_sec++;
-    }
-
-    tm_info = localtime(&tv.tv_sec);
-
-    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-
-
-    printf("[rank %d at %s.%03ld] ", process_rank, buffer, millisec);
-
-}
-
-#endif
-
-
 
 enum train_flag {
     training = 0, testing = 1, tuning = 2, undefined=-1
@@ -103,7 +68,7 @@ void print_usage(const std::string &program_name) {
               << "  -H  --hyperparameters-path   Path to the hyperparameters file.\n"
               << "  -s  --svm-path               Path to the SVM file.\n"
               << "  -S  --save-dir-path          Folder path for saving SVM files.\n"
-              << "  -M  --tuning-matrix-dir-path Folder path for saving tuning matrix files.\n"
+              << "  -M  --tuning-table-dir-path Folder path for saving tuning table files.\n"
               << "  -k  --kernel                 Kernel type, may be 'l' (linear), 'p' (polynomial), 'r' (rbf) or 's' (sigmoid).\n"
               << "  -C  --cost                   Cost parameter.\n"
               << "  -g  --gamma                  Gamma parameter.\n"
@@ -136,6 +101,7 @@ int main(int argc, char *argv[]) {
     /* --------------------------------------------------- */
 
     bool performance_checks =  read_env_var("PERFORMANCE_CHECKS").at(0) == 'T';
+    int control = 0;
 
     if(performance_checks) {
 
@@ -157,6 +123,16 @@ int main(int argc, char *argv[]) {
 
     }
 
+    std::string filepath_training;
+    std::string filepath_validation;
+    std::string filepath_testing;
+    std::string filepath_svm;
+
+    std::string hparameters_path;
+    std::string save_svm_dir_path;
+    std::string save_tune_dir_path;
+
+    bool defaul = true;
 
 #if CLI_ARGS
 // ----------------------- deal with cli args --------------------------------------------
@@ -179,7 +155,7 @@ int main(int argc, char *argv[]) {
             {"hyperparameters-path", 2, nullptr, 'H'},
             {"svm-path",         2, nullptr, 's'},
             {"save-dir-path",         2, nullptr, 'S'},
-            {"tuning-matrix-dir-path",         2, nullptr, 'M'},
+            {"tuning-table-dir-path",         2, nullptr, 'M'},
             {"kernel",           2, nullptr, 'k'},
             {"cost",             2, nullptr, 'C'},
             {"gamma",            2, nullptr, 'g'},
@@ -202,14 +178,7 @@ int main(int argc, char *argv[]) {
     std::string p1;
     std::string p2;
 
-    std::string filepath_training;
-    std::string filepath_validation;
-    std::string filepath_testing;
-    std::string filepath_svm;
 
-    std::string hparameters_path;
-    std::string save_svm_dir_path;
-    std::string save_tune_dir_path;
 
     int rows_t = 0;
     int rows_v = 0;
@@ -643,22 +612,22 @@ int main(int argc, char *argv[]) {
 
     flag = tuning;
 
-    bool tuning_logic = false;
+    bool tuning_logic = true;
 
     /* Antonio */
-     std::string filepath_training = "hpc2022/data/iris_train.csv";
-     std::string filepath_validation = "hpc2022/data/iris_validation.csv";
-     std::string save_dir_path = "hpc2022/saved_svm/";
+     // filepath_training = "hpc2022/data/iris_train.csv";
+     // filepath_validation = "hpc2022/data/iris_validation.csv";
+     // save_svm_dir_path = "hpc2022/saved_svm/";
 
 
     /* Maurizio */
-//    std::string filepath_training = "hpc2022/data/iris_train.csv";
-//    std::string filepath_validation = "hpc2022/data/iris_validation.csv";
-//    std::string save_dir_path = "hpc2022/saved_svm";
+    filepath_training = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_train.csv";
+    filepath_validation = "/home/dmmp/Documents/GitHub/hpc2022/data/iris_validation.csv";
+    save_svm_dir_path = "hpc2022/saved_svm";
 
 
     std::string filepath_hyper_parameters = "hpc2022/data/hyperparameters.csv"; // TODO: implement
-    std::string filepath_svm = "hpc2022/saved_svm/sigmoids_C0.500000_G0.010000_O0.000000.svm";
+    filepath_svm = "hpc2022/saved_svm/sigmoids_C0.500000_G0.010000_O0.000000.svm";
 
     int rows_t = 70, rows_v = 30, columns = 5, target_column = 5;
     char ker_type = 's';
@@ -932,13 +901,14 @@ int main(int argc, char *argv[]) {
             double *degree_array;
 
             int cost_array_size, gamma_array_size, coef0_array_size, degree_array_size;
+            cost_array = (double *) calloc(sizeof(double) , MAX_HP_VALUES);
+            gamma_array = (double *) calloc(sizeof(double) , MAX_HP_VALUES);
+            coef0_array = (double *) calloc(sizeof(double) , MAX_HP_VALUES);
+            degree_array = (double *) calloc(sizeof(double) , MAX_HP_VALUES);
 
             if (!hparameters_path.empty()) {
 
-                cost_array = (double *) malloc(sizeof(double) * MAX_HP_VALUES);
-                gamma_array = (double *) malloc(sizeof(double) * MAX_HP_VALUES);
-                coef0_array = (double *) malloc(sizeof(double) * MAX_HP_VALUES);
-                degree_array = (double *) malloc(sizeof(double) * MAX_HP_VALUES);
+
 
                 cost_array_size = 0;
                 gamma_array_size = 0;
@@ -950,17 +920,19 @@ int main(int argc, char *argv[]) {
                                      gamma_array, gamma_array_size,
                                      coef0_array, coef0_array_size,
                                      degree_array, degree_array_size);
+
+                cost_array = (double *) realloc(cost_array, cost_array_size * sizeof(double));
+                gamma_array = (double *) realloc(gamma_array, gamma_array_size * sizeof(double));
+                coef0_array = (double *) realloc(coef0_array, coef0_array_size * sizeof(double));
+                degree_array = (double *) realloc(degree_array, degree_array_size * sizeof(double));
+                defaul = false;
+
             } else {
                 if(process_rank == MASTER_PROCESS) {
                     std::cout << "\n[WARN] Tuning file was not supplied, using default values\n";
                 }
 
-                cost_array_size = DEFAULT_COST_SIZE, gamma_array_size = DEFAULT_GAMMA_SIZE, coef0_array_size = DEFAULT_COEF0_SIZE, degree_array_size = DEFAULT_DEGREE_SIZE;
-
-                cost_array = (double *) malloc(sizeof(double) * cost_array_size);
-                gamma_array = (double *) malloc(sizeof(double) * gamma_array_size);
-                coef0_array = (double *) malloc(sizeof(double) * coef0_array_size);
-                degree_array = (double *) malloc(sizeof(double) * degree_array_size);
+                cost_array_size = DEFAULT_COST_SIZE; gamma_array_size = DEFAULT_GAMMA_SIZE; coef0_array_size = DEFAULT_COEF0_SIZE; degree_array_size = DEFAULT_DEGREE_SIZE;
 
                 cost_array = DEFAULT_COST_ARRAY;
                 gamma_array = DEFAULT_GAMMA_ARRAY;
@@ -992,11 +964,12 @@ int main(int argc, char *argv[]) {
 
 #else
 
-            int cost_array_size = 6, gamma_array_size = 8, coef0_array_size = 6, degree_array_size = 7;
-            double cost_array[] = DEFAULT_COST_ARRAY;
-            double gamma_array[] = DEFAULT_GAMMA_ARRAY;
-            double coef0_array[] = DEFAULT_COEF0_ARRAY;
-            double degree_array[] = DEFAULT_DEGREE_ARRAY;
+            int cost_array_size = DEFAULT_COST_SIZE, gamma_array_size = DEFAULT_GAMMA_SIZE, coef0_array_size = DEFAULT_COEF0_SIZE, degree_array_size = DEFAULT_DEGREE_SIZE;
+            double* cost_array = DEFAULT_COST_ARRAY;
+            double* gamma_array = DEFAULT_GAMMA_ARRAY;
+            double* coef0_array = DEFAULT_COEF0_ARRAY;
+            double* degree_array = DEFAULT_DEGREE_ARRAY;
+
 
 #endif
             if (performance_checks) {
@@ -1086,8 +1059,10 @@ int main(int argc, char *argv[]) {
             int polynomial_rows = cost_array_size * gamma_array_size * coef0_array_size * degree_array_size;
 
             int tuning_table_rows = linear_rows + radial_rows + sigmoid_rows + polynomial_rows;
-            int tuning_table_columns = NUMBER_OF_HYPER_PARAMETERS + 1/* accuracy*/ + 1/*class 1 accuracy*/ +
-                                       1/*class 2 accuracy*/; // NB: type of kernel will be printed separately
+            int tuning_table_columns = NUMBER_OF_HYPER_PARAMETERS +
+                                        1/* accuracy*/ +
+                                        1/*class 1 accuracy*/ +
+                                        1/*class 2 accuracy*/; // NB: type of kernel will be printed separately
             if (process_rank == MASTER_PROCESS) {
                 std::cout << "There are a total of " << IMPLEMENTED_KERNELS << " kernels to tune." << std::endl;
                 std::cout << "Tuning will use:\n\t " << cost_array_size << " different costs, " << std::endl;
@@ -1104,11 +1079,8 @@ int main(int argc, char *argv[]) {
             auto *local_tuning_table = (double *) calloc(tuning_table_rows * tuning_table_columns,
                                                          sizeof(double)); // matrix
 
-
-
-
             if (tuning_logic) {
-                // one after the other
+                // split
 
 #if PERFORMANCE_CHECK
 
@@ -1219,7 +1191,7 @@ int main(int argc, char *argv[]) {
 
                 MPI_Reduce(local_tuning_table, final_tuning_table, (int) (tuning_table_rows * tuning_table_columns),
                            MPI_DOUBLE, MPI_SUM, MASTER_PROCESS, MPI_COMM_WORLD);
-                free(local_tuning_table);
+
 
                 if (performance_checks) {
                     MPI_Barrier(MPI_COMM_WORLD);
@@ -1355,7 +1327,7 @@ int main(int argc, char *argv[]) {
                     }
                     ++time_iterator; // start reduce
                 }
-
+                final_tuning_table = local_tuning_table;
                 if (performance_checks) {
 
                     MPI_Barrier(MPI_COMM_WORLD);
@@ -1378,22 +1350,55 @@ int main(int argc, char *argv[]) {
 #endif
             }
 
+            if(!defaul) {
+                free(cost_array);
+                cost_array = nullptr;
+                free(gamma_array);
+                gamma_array = nullptr;
+                free(coef0_array);
+                coef0_array = nullptr;
+                free(degree_array);
+                degree_array = nullptr;
+            }
 
             if (process_rank == MASTER_PROCESS) {
 
-                // TODO: save tuning matrix
+
+                if(save_tune_dir_path.empty()){
+                    std::cout << "[WARN] Tuning save path was not passed, therefore the tuning table will be saved in the current directory" << std::endl;
+                }
+                std::cout << "Starting tuning table save" << std::endl;
+                control += save_tuning_table(save_tune_dir_path, final_tuning_table, tuning_table_rows, tuning_table_columns, linear_rows, radial_rows, sigmoid_rows, polynomial_rows);
+                if(control > 0){
+                    std::cout << "Error while saving tuning table\n";
+                }
+// --------------------------------------------------- error is inside here ---------------------------------------------------------------------------------------------
+                // if (performance_checks) {
+////
+                //     MPI_Barrier(MPI_COMM_WORLD);
+                //     *(time_checks + time_iterator) = MPI_Wtime();
+////
+                //     if (process_rank == MASTER_PROCESS) {
+                //         std::cout << "\n Saving tuning table ends at time " << *(time_checks + time_iterator) << std::endl;
+                //         std::cout << "\n It took "
+                //                   << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                //                   << "seconds\n" << std::endl;
+                //     }
+                //     ++time_iterator; // start getting best row
+                // }
+
+// ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
                 // todo: revise selection logic
                 auto *accuracies = (double *) calloc(tuning_table_rows, sizeof(double));
-                get_column(local_tuning_table, NUMBER_OF_HYPER_PARAMETERS, tuning_table_columns, tuning_table_rows,
+                get_column(final_tuning_table, NUMBER_OF_HYPER_PARAMETERS, tuning_table_columns, tuning_table_rows,
                            accuracies);
                 auto *m = std::max_element(accuracies, accuracies + tuning_table_rows);
                 int row_index = (int) (m - accuracies);
                 double max_accuracy = *m;
                 std::cout << "Best Accuracy: " << max_accuracy << std::endl;
                 auto *best_row = (double *) calloc(tuning_table_columns, sizeof(double));
-                get_row(local_tuning_table, row_index, tuning_table_columns, best_row);
-
+                get_row(final_tuning_table, row_index, tuning_table_columns, best_row);
 
                 std::cout << "Best combination:\n\tKernel Cost Gamma Coef0 Degree Accuracy C1_Acc. C2_Acc."
                           << std::endl;
@@ -1401,38 +1406,25 @@ int main(int argc, char *argv[]) {
                 char out_kernel;
 
                 out_kernel = decide_kernel(row_index, linear_rows, radial_rows, sigmoid_rows, polynomial_rows);
+                std::cout << "\t" <<get_extended_kernel_name(out_kernel) << " ";
 
-                switch (out_kernel) {
-                    case 'l': {
-                        std::cout << "\tLinear ";
-                        break;
-                    }
-                    case 'r': {
-                        std::cout << "\tRadial ";
-                        break;
-                    }
-                    case 's': {
-                        std::cout << "\tSigmoid ";
-                        break;
-                    }
-                    case 'p': {
-                        std::cout << "\tPolynomial ";
-                        break;
-                    }
-                    default: {
-                        std::cout << "\tError from the code, contact the developer!";
-                        exit(2);
-                    }
-
-                }
                 print_vector(best_row, tuning_table_columns, false);
                 // todo: save data somewhere
 
                 free(best_row);
                 free(accuracies);
+
             }
 
+
+
             free(local_tuning_table);
+            local_tuning_table= nullptr;
+
+            free(final_tuning_table);
+            final_tuning_table= nullptr;
+
+            break;
 
         }
 
@@ -1442,10 +1434,14 @@ int main(int argc, char *argv[]) {
     }
 
 
+
     if(performance_checks) {
 
-        MPI_Barrier(MPI_COMM_WORLD);
+        control = MPI_Barrier(MPI_COMM_WORLD);
+        if(control != MPI_SUCCESS){exit(1);}
+
         *(time_checks + time_iterator) = MPI_Wtime();
+
 
         if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
@@ -1462,6 +1458,7 @@ int main(int argc, char *argv[]) {
     }
 
     free(time_checks);
+
 
 
     MPI_Finalize();

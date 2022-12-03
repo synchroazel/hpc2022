@@ -100,16 +100,19 @@ void set_kernel_function(Kernel_SVM *svm, char kernel_type) {
         exit(1);
     }
 }
-
-std::string get_extended_kernel_name(Kernel_SVM *svm){
-    switch(svm->kernel_type){
-        case 'l':return "Linear (l) ";
-        case 'r':return "Radial (r)";
-        case 's':return "Sigmoid (s) ";
-        case 'p':return "polynomial (p) ";
+std::string get_extended_kernel_name(char c){
+    switch(c){
+        case 'l':return "Linear ";
+        case 'r':return "Radial ";
+        case 's':return "Sigmoid ";
+        case 'p':return "polynomial ";
         default:return "";
     }
 }
+std::string get_extended_kernel_name(Kernel_SVM *svm){
+    return get_extended_kernel_name(svm->kernel_type);
+}
+
 // TODO: add error checks
 
 
@@ -242,15 +245,20 @@ void read_hyperparameters(const std::string &filepath,
     std::string coef0_values = tree.get<std::string>("coef0");
     std::string degree_values = tree.get<std::string>("degree");
 
-    cost_array_size = count(cost_values.begin(), cost_values.end(), ',') + 1;
-    gamma_array_size = count(gamma_values.begin(), gamma_values.end(), ',') + 1;
-    coef0_array_size = count(coef0_values.begin(), coef0_values.end(), ',') + 1;
-    degree_array_size = count(degree_values.begin(), degree_values.end(), ',') + 1;
+    cost_array_size = (int)count(cost_values.begin(), cost_values.end(), ',') + 1;
+    gamma_array_size = (int)count(gamma_values.begin(), gamma_values.end(), ',') + 1;
+    coef0_array_size = (int)count(coef0_values.begin(), coef0_values.end(), ',') + 1;
+    degree_array_size = (int)count(degree_values.begin(), degree_values.end(), ',') + 1;
 
-    cost_array = (double *) realloc(cost_array, cost_array_size * sizeof(double));
-    gamma_array = (double *) realloc(gamma_array, gamma_array_size * sizeof(double));
-    coef0_array = (double *) realloc(coef0_array, coef0_array_size * sizeof(double));
-    degree_array = (double *) realloc(degree_array, degree_array_size * sizeof(double));
+    // cost_array = (double *) realloc(cost_array, cost_array_size * sizeof(double));
+    // gamma_array = (double *) realloc(gamma_array, gamma_array_size * sizeof(double));
+    // coef0_array = (double *) realloc(coef0_array, coef0_array_size * sizeof(double));
+    // degree_array = (double *) realloc(degree_array, degree_array_size * sizeof(double));
+
+    // cost_array = (double *) calloc( cost_array_size , sizeof(double));
+    // gamma_array = (double *) calloc(gamma_array_size , sizeof(double));
+    // coef0_array = (double *) calloc(coef0_array_size , sizeof(double));
+    // degree_array = (double *) calloc( degree_array_size , sizeof(double));
 
     std::vector<std::string> cost_vector;
     std::vector<std::string> gamma_vector;
@@ -277,7 +285,7 @@ void read_hyperparameters(const std::string &filepath,
     for (int i = 0; i < degree_array_size; i++) {
         degree_array[i] = std::stod(degree_vector[i]);
     }
-};
+}
 
 
 /**

@@ -323,6 +323,7 @@ void serial_train(const Dataset &training_data,
     svm->arr_ys_in = (int *) realloc(svm->arr_ys_in, svm->arr_xs_in_row_size * sizeof(int));
     svm->arr_alpha_s_in = (double *) realloc(svm->arr_alpha_s_in, svm->arr_xs_in_row_size * sizeof(double));
 
+
     // Update the bias
     svm->b = 0.0;
     for (i = 0; i < svm->arr_xs_row_size; i++) {

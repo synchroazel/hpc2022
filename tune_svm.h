@@ -5,20 +5,31 @@
 #include "Dataset.h"
 #include "svm_utils.h"
 #include "mpi.h"
+#include "utils.h"
 
 #ifndef HPC2022_TUNE_SVM_H
 #define HPC2022_TUNE_SVM_H
 
 #define DEBUG_TUNE false
 
-double DEFAULT_COST_ARRAY[] = {0.001, 0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10, 100};
-#define DEFAULT_COST_SIZE 10
-double DEFAULT_GAMMA_ARRAY[] ={0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10};
-#define DEFAULT_GAMMA_SIZE 8
-double DEFAULT_COEF0_ARRAY[] ={0, 0.5, 1, 2.5, 5, 10};
-#define DEFAULT_COEF0_SIZE 6
-double DEFAULT_DEGREE_ARRAY[] ={1, 2, 3, 4, 5, 10};
-#define DEFAULT_DEGREE_SIZE 6
+// double DEFAULT_COST_ARRAY[] = {0.001, 0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10, 100};
+// #define DEFAULT_COST_SIZE 10
+// double DEFAULT_GAMMA_ARRAY[] ={0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10};
+// #define DEFAULT_GAMMA_SIZE 8
+// double DEFAULT_COEF0_ARRAY[] ={0, 0.5, 1, 2.5, 5, 10};
+// #define DEFAULT_COEF0_SIZE 6
+// double DEFAULT_DEGREE_ARRAY[] ={1, 2, 3, 4, 5, 10};
+// #define DEFAULT_DEGREE_SIZE 6
+
+// for debug purposes
+double DEFAULT_COST_ARRAY[] = {0.001, 0.01, 0.05};
+#define DEFAULT_COST_SIZE 3
+double DEFAULT_GAMMA_ARRAY[] ={0.01, 0.05};
+#define DEFAULT_GAMMA_SIZE 2
+double DEFAULT_COEF0_ARRAY[] ={ 5, 10};
+#define DEFAULT_COEF0_SIZE 2
+double DEFAULT_DEGREE_ARRAY[] ={1, 5, 10};
+#define DEFAULT_DEGREE_SIZE 3
 
 char decide_kernel(int row_index, int linear_rows, int radial_rows, int sigmoid_rows, int polynomial_rows){
     char out_kernel;
@@ -34,6 +45,48 @@ char decide_kernel(int row_index, int linear_rows, int radial_rows, int sigmoid_
         out_kernel = -1;
     }
     return out_kernel;
+}
+
+int save_tuning_table(std::string save_tune_dir_path, double* final_tuning_table, int tuning_table_rows, int tuning_table_columns, int linear_rows, int radial_rows, int sigmoid_rows, int polynomial_rows){
+    if(save_tune_dir_path.empty()){
+        save_tune_dir_path.append("./");
+    }
+    save_tune_dir_path.append("tuning_table[");
+    char buffer[30];
+    long millisec;
+
+    get_current_time_formatted(buffer, &millisec);
+    save_tune_dir_path.append(buffer);
+    save_tune_dir_path.append("].csv");
+
+    FILE *file_to_write;
+    file_to_write = fopen(save_tune_dir_path.c_str(), "w");
+    std::string current_string = "Kernel, Cost, Gamma, Intercept, Degree, Accuracy, C1 Acc., C2 Acc \n";
+    fwrite(current_string.c_str(), sizeof(char), current_string.length(), file_to_write );
+
+
+
+    if (!file_to_write) {
+        std::cout << "Error opening file. Saving was not possible!";
+        return 1;
+    }
+
+    for(int i=0; i<tuning_table_rows; i++)
+    {
+        current_string.clear();
+        current_string += decide_kernel(i, linear_rows, radial_rows, sigmoid_rows, polynomial_rows);
+        current_string.append(", ");
+        for(int j=0;j<tuning_table_columns; j++){
+            current_string += std::to_string(final_tuning_table[index(i,j,tuning_table_columns)]);
+            current_string.append(", ");
+        }
+        current_string += '\n';
+        fwrite(current_string.c_str(), sizeof(char), current_string.length(), file_to_write );
+    }
+    fclose(file_to_write);
+
+    return 0;
+
 }
 
 void tune_linear(Dataset *df_train,
@@ -52,6 +105,13 @@ void tune_linear(Dataset *df_train,
 
     int current_process; // es: 21, with offset 20
     MPI_Comm_rank(MPI_COMM_WORLD, &current_process);
+
+    if((current_process - process_offset) > cost_array_size){
+        return;
+    }
+    if(available_processes > cost_array_size){
+        available_processes = cost_array_size;
+    }
 
     int max_elements = cost_array_size; // es: 3000
     int chunk_size = (int)(ceil((double )(max_elements)/(double )(available_processes))); // es: 3000 / 8 = 375
@@ -81,7 +141,7 @@ void tune_linear(Dataset *df_train,
         double gamma = 0;
         double coef0 = 0;
         double degree = 0;
-        double params[4] = {combination_matrix[index(i-start,0,2)],gamma, coef0, degree};
+        double params[4] = {combination_matrix[index(i-start,0,1)],gamma, coef0, degree};
 
 #if DEBUG_TUNE
         std::cout << "Process " << current_process << " training (radial) with cost " << params[0] << " and gamma " << params[1] << std::endl;
@@ -99,6 +159,12 @@ void tune_linear(Dataset *df_train,
         result_table[index(offset + i , 4, result_table_columns)] = svm.accuracy;
         result_table[index(offset + i , 5, result_table_columns)] = svm.accuracy_c1;
         result_table[index(offset + i , 6, result_table_columns)] = svm.accuracy_c2;
+        free(svm.arr_alpha_s);
+        free(svm.arr_alpha_s_in);
+        free(svm.arr_xs);
+        free(svm.arr_xs_in);
+        free(svm.arr_ys);
+        free(svm.arr_ys_in);
     }
 
     free(combination_matrix);
@@ -124,14 +190,16 @@ void tune_radial(Dataset *df_train,
                  bool verbose= false)
 {
 
-#if DEBUG_TUNE
-
-
-
-#endif
 
     int current_process; // es: 21, with offset 20
     MPI_Comm_rank(MPI_COMM_WORLD, &current_process);
+
+    if((current_process - process_offset) > (cost_array_size * gamma_array_size)){
+        return;
+    }
+    if(available_processes > cost_array_size * gamma_array_size){
+        available_processes = cost_array_size* gamma_array_size;
+    }
 
     int max_elements = int(cost_array_size * gamma_array_size); // es: 3000
     int chunk_size = (int)(ceil((double )(max_elements)/(double )(available_processes))); // es: 3000 / 8 = 375
@@ -181,6 +249,13 @@ void tune_radial(Dataset *df_train,
         result_table[index(offset + i , 4, result_table_columns)] = svm.accuracy;
         result_table[index(offset + i , 5, result_table_columns)] = svm.accuracy_c1;
         result_table[index(offset + i , 6, result_table_columns)] = svm.accuracy_c2;
+
+        free(svm.arr_alpha_s);
+        free(svm.arr_alpha_s_in);
+        free(svm.arr_xs);
+        free(svm.arr_xs_in);
+        free(svm.arr_ys);
+        free(svm.arr_ys_in);
     }
 
     free(combination_matrix);
@@ -208,6 +283,13 @@ void tune_sigmoid(Dataset *df_train,
 
     int current_process; // es: 21, with offset 20
     MPI_Comm_rank(MPI_COMM_WORLD, &current_process);
+
+    if((current_process - process_offset) > (cost_array_size * gamma_array_size * coef0_array_size)){
+        return;
+    }
+    if(available_processes > cost_array_size * gamma_array_size * coef0_array_size){
+        available_processes = cost_array_size* gamma_array_size * coef0_array_size;
+    }
 
     int max_elements = int(cost_array_size * gamma_array_size * coef0_array_size); // es: 3000
     int chunk_size = (int)(ceil((double )(max_elements)/(double )(available_processes))); // es: 3000 / 8 = 375
@@ -261,6 +343,13 @@ void tune_sigmoid(Dataset *df_train,
         result_table[index(offset + i , 4, result_table_columns)] = svm.accuracy;
         result_table[index(offset + i , 5, result_table_columns)] = svm.accuracy_c1;
         result_table[index(offset + i , 6, result_table_columns)] = svm.accuracy_c2;
+
+        free(svm.arr_alpha_s);
+        free(svm.arr_alpha_s_in);
+        free(svm.arr_xs);
+        free(svm.arr_xs_in);
+        free(svm.arr_ys);
+        free(svm.arr_ys_in);
     }
 
     free(combination_matrix);
@@ -291,6 +380,13 @@ void tune_polynomial(Dataset *df_train,
 
     int current_process; // es: 21, with offset 20
     MPI_Comm_rank(MPI_COMM_WORLD, &current_process);
+
+    if((current_process - process_offset) > (cost_array_size * gamma_array_size * coef0_array_size * degree_array_size)){
+        return;
+    }
+    if(available_processes > cost_array_size * gamma_array_size * coef0_array_size * degree_array_size){
+        available_processes = cost_array_size * gamma_array_size * coef0_array_size * degree_array_size;
+    }
 
     int max_elements = int(cost_array_size * gamma_array_size * coef0_array_size * degree_array_size); // es: 3000
     int chunk_size = (int)(ceil((double )(max_elements)/(double )(available_processes))); // es: 3000 / 8 = 375
@@ -346,6 +442,13 @@ void tune_polynomial(Dataset *df_train,
         result_table[index(offset + i , 4, result_table_columns)] = svm.accuracy;
         result_table[index(offset + i , 5, result_table_columns)] = svm.accuracy_c1;
         result_table[index(offset + i , 6, result_table_columns)] = svm.accuracy_c2;
+
+        free(svm.arr_alpha_s);
+        free(svm.arr_alpha_s_in);
+        free(svm.arr_xs);
+        free(svm.arr_xs_in);
+        free(svm.arr_ys);
+        free(svm.arr_ys_in);
     }
 
     free(combination_matrix);
@@ -397,6 +500,13 @@ void tune_linear2(Dataset *df_train,
         result_table[index(offset + i , 4, result_table_columns)] = svm.accuracy;
         result_table[index(offset + i , 5, result_table_columns)] = svm.accuracy_c1;
         result_table[index(offset + i , 6, result_table_columns)] = svm.accuracy_c2;
+
+        free(svm.arr_alpha_s);
+        free(svm.arr_alpha_s_in);
+        free(svm.arr_xs);
+        free(svm.arr_xs_in);
+        free(svm.arr_ys);
+        free(svm.arr_ys_in);
     }
 }
 
@@ -453,6 +563,13 @@ void tune_radial2(Dataset *df_train,
             result_table[index(offset + i, 4, result_table_columns)] = svm.accuracy;
             result_table[index(offset + i, 5, result_table_columns)] = svm.accuracy_c1;
             result_table[index(offset + i, 6, result_table_columns)] = svm.accuracy_c2;
+
+            free(svm.arr_alpha_s);
+            free(svm.arr_alpha_s_in);
+            free(svm.arr_xs);
+            free(svm.arr_xs_in);
+            free(svm.arr_ys);
+            free(svm.arr_ys_in);
         }
     }
 
@@ -514,6 +631,12 @@ void tune_sigmoid2(Dataset *df_train,
                 result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 5, result_table_columns)] = svm.accuracy_c1;
                 result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 6, result_table_columns)] = svm.accuracy_c2;
 
+                free(svm.arr_alpha_s);
+                free(svm.arr_alpha_s_in);
+                free(svm.arr_xs);
+                free(svm.arr_xs_in);
+                free(svm.arr_ys);
+                free(svm.arr_ys_in);
             }
 
         }
@@ -578,6 +701,13 @@ void tune_polynomial2(Dataset *df_train,
                     result_table[index(offset + i, 4, result_table_columns)] = svm.accuracy;
                     result_table[index(offset + i, 5, result_table_columns)] = svm.accuracy_c1;
                     result_table[index(offset + i, 6, result_table_columns)] = svm.accuracy_c2;
+
+                    free(svm.arr_alpha_s);
+                    free(svm.arr_alpha_s_in);
+                    free(svm.arr_xs);
+                    free(svm.arr_xs_in);
+                    free(svm.arr_ys);
+                    free(svm.arr_ys_in);
                 }
 
             }
