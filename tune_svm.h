@@ -11,6 +11,31 @@
 
 #define DEBUG_TUNE false
 
+double DEFAULT_COST_ARRAY[] = {0.001, 0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10, 100};
+#define DEFAULT_COST_SIZE 10
+double DEFAULT_GAMMA_ARRAY[] ={0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10};
+#define DEFAULT_GAMMA_SIZE 8
+double DEFAULT_COEF0_ARRAY[] ={0, 0.5, 1, 2.5, 5, 10};
+#define DEFAULT_COEF0_SIZE 6
+double DEFAULT_DEGREE_ARRAY[] ={1, 2, 3, 4, 5, 10};
+#define DEFAULT_DEGREE_SIZE 6
+
+char decide_kernel(int row_index, int linear_rows, int radial_rows, int sigmoid_rows, int polynomial_rows){
+    char out_kernel;
+    if (row_index < linear_rows) {
+        out_kernel = 'l';
+    } else if (row_index < linear_rows + radial_rows) {
+        out_kernel = 'r';
+    } else if (row_index < linear_rows + radial_rows + sigmoid_rows) {
+        out_kernel = 's';
+    } else if (row_index < linear_rows + radial_rows + sigmoid_rows + polynomial_rows) {
+        out_kernel = 'p';
+    } else {
+        out_kernel = -1;
+    }
+    return out_kernel;
+}
+
 void tune_linear(Dataset *df_train,
                  Dataset *df_validation,
                  const double *cost_array,

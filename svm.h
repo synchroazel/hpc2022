@@ -18,7 +18,11 @@
 #define DEFAULT_LEARNING_RATE 0.001
 #define DEFAULT_LIMIT 0.1
 #define DEFAULT_EPS 1e-6
-
+#define DEFAULT_COST 1
+#define DEFAULT_GAMMA 0.3
+#define DEFAULT_INTERCEPT 0
+#define DEFAULT_DEGREE 2
+#define DEFAULT_KERNEL 'p'
 
 /**
  * Kernel namespace
@@ -96,6 +100,16 @@ void set_kernel_function(Kernel_SVM *svm, char kernel_type) {
         exit(1);
     }
 }
+
+std::string get_extended_kernel_name(Kernel_SVM *svm){
+    switch(svm->kernel_type){
+        case 'l':return "Linear (l) ";
+        case 'r':return "Radial (r)";
+        case 's':return "Sigmoid (s) ";
+        case 'p':return "polynomial (p) ";
+        default:return "";
+    }
+}
 // TODO: add error checks
 
 
@@ -166,12 +180,12 @@ int read_svm(Kernel_SVM *svm, const std::string &path) {
     fread(&svm->arr_xs_column_size, sizeof(int), 1, file_to_read);
     fread(&svm->arr_xs_in_row_size, sizeof(int), 1, file_to_read);
 
-    svm->arr_xs = (double *) malloc(svm->arr_xs_row_size * svm->arr_xs_column_size * sizeof(double));
-    svm->arr_ys = (int *) malloc(svm->arr_xs_row_size * sizeof(int));
-    svm->arr_alpha_s = (double *) malloc(svm->arr_xs_row_size * sizeof(double));
-    svm->arr_xs_in = (double *) malloc(svm->arr_xs_in_row_size * svm->arr_xs_column_size * sizeof(double));
-    svm->arr_ys_in = (int *) malloc(svm->arr_xs_in_row_size * sizeof(int));
-    svm->arr_alpha_s_in = (double *) malloc(svm->arr_xs_in_row_size * sizeof(double));
+    svm->arr_xs = (double *) calloc(svm->arr_xs_row_size , svm->arr_xs_column_size * sizeof(double));
+    svm->arr_ys = (int *) calloc(svm->arr_xs_row_size , sizeof(int));
+    svm->arr_alpha_s = (double *) calloc(svm->arr_xs_row_size , sizeof(double));
+    svm->arr_xs_in = (double *) calloc(svm->arr_xs_in_row_size * svm->arr_xs_column_size , sizeof(double));
+    svm->arr_ys_in = (int *) calloc(svm->arr_xs_in_row_size , sizeof(int));
+    svm->arr_alpha_s_in = (double *) calloc(svm->arr_xs_in_row_size , sizeof(double));
 
     fread(svm->arr_xs, sizeof(double) * svm->arr_xs_row_size * svm->arr_xs_column_size, 1, file_to_read);
     fread(svm->arr_ys, sizeof(int) * svm->arr_xs_row_size, 1, file_to_read);

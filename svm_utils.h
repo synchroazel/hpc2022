@@ -1159,8 +1159,10 @@ void parallel_test(Dataset test_data,
 
     if ((svm->verbose) && (process_rank == process_offset)) {
 
-        std::cout << "\n┌───────────────── Test Results ──────────────────┐" << std::endl;
+        std::string extended_kernel = get_extended_kernel_name(svm);
 
+        std::cout << "\n┌───────────────── Test Results ──────────────────┐" << std::endl;
+        std::cout << "  Kernel: " << extended_kernel << std::endl;
         std::cout << "  Cost: " << svm->params[0] << " | Gamma: " << svm->params[1] << " | Coef0: "
                   << svm->params[2] << " | Degree: " << svm->params[3] << std::endl;
         std::cout << "  accuracy-all:\t\t" << std::setprecision(6) << svm->accuracy << " ("
