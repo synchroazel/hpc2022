@@ -18,9 +18,9 @@ def load_data(path):
     df_validation.to_csv(f'{dir}/{basename}_validation.csv', header=False, index=False)
     df_test.to_csv(f'{dir}/{basename}_test.csv', header=False, index=False)
 
-    print('[INFO] Training dataset has {} rows and {} columns'.format(df_training.shape[0], df_training.shape[1]))
-    print('[INFO] Validation dataset has {} rows and {} columns'.format(df_validation.shape[0], df_validation.shape[1]))
-    print('[INFO] Test dataset has {} rows and {} columns'.format(df_test.shape[0], df_test.shape[1]))
+    print('Training dataset has [{}] rows and [{}] columns'.format(df_training.shape[0], df_training.shape[1]))
+    print('Validation dataset has [{}] rows and [{}] columns'.format(df_validation.shape[0], df_validation.shape[1]))
+    print('Test dataset has [{}] rows and [{}] columns'.format(df_test.shape[0], df_test.shape[1]))
 
 
 if __name__ == '__main__':
