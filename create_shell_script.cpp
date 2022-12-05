@@ -164,7 +164,6 @@ int main(int argc, char *argv[]) {
     std::string filepath_svm;
 
     std::string save_svm_dir_path;
-    std::string save_tune_dir_path;
 
     std::string logic;
     std::string parallel_tuning;
@@ -331,7 +330,7 @@ int main(int argc, char *argv[]) {
                  break;
              }
              case 'M': {  /* -M or --tuning-table-dir-path */
-                 save_tune_dir_path = optarg;
+                 tuning_table_dir_path = optarg;
                  break;
              }
 
