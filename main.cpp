@@ -16,11 +16,10 @@
 #define DEBUG_MAIN false
 #define MAX_HP_VALUES 20 // HP are hyperparameters, not health points
 
-std::string read_env_var(const std::string& name){
+std::string read_env_var(const std::string &name) {
     std::string ris;
-    if(getenv(name.c_str()))
-    {
-        ris=getenv(name.c_str());
+    if (getenv(name.c_str())) {
+        ris = getenv(name.c_str());
     } else {
         std::cout << "[WARNING] The environment variable" << name << "was not found.\n";
         // exit(1);
@@ -36,7 +35,7 @@ std::string read_env_var(const std::string& name){
 // TODO: what about boost bint? wth?
 
 enum train_flag {
-    training = 0, testing = 1, tuning = 2, undefined=-1
+    training = 0, testing = 1, tuning = 2, undefined = -1
 } flag;
 
 
@@ -50,8 +49,6 @@ enum train_flag {
 
 
 #if CLI_ARGS
-
-
 
 
 void print_usage(const std::string &program_name) {
@@ -68,7 +65,7 @@ void print_usage(const std::string &program_name) {
               << "  -H  --hyperparameters-path   Path to the hyperparameters file.\n"
               << "  -s  --svm-path               Path to the SVM file.\n"
               << "  -S  --save-dir-path          Folder path for saving SVM files.\n"
-              << "  -M  --tuning-table-dir-path Folder path for saving tuning table files.\n"
+              << "  -M  --tuning-table-dir-path  Folder path for saving tuning table files.\n"
               << "  -k  --kernel                 Kernel type, may be 'l' (linear), 'p' (polynomial), 'r' (rbf) or 's' (sigmoid).\n"
               << "  -C  --cost                   Cost parameter.\n"
               << "  -g  --gamma                  Gamma parameter.\n"
@@ -100,20 +97,24 @@ int main(int argc, char *argv[]) {
 
     /* --------------------------------------------------- */
 
-    bool performance_checks =  read_env_var("PERFORMANCE_CHECKS").at(0) == 'T';
+    bool performance_checks = read_env_var("PERFORMANCE_CHECKS").at(0) == 'T';
     int control = 0;
 
-    if(performance_checks) {
+    if (performance_checks) {
 
         MPI_Barrier(MPI_COMM_WORLD);
 
         if (process_rank == MASTER_PROCESS) {
+#if SHOW_LOGTIME
             logtime();
+#endif
             std::cout << "This step is done by process 0 only to benchmark the speed of for loops\n";
             double start = MPI_Wtime(), end = 0;
             for (int i = 0; i < 1000; i++) {}
             end = MPI_Wtime();
+#if SHOW_LOGTIME
             logtime();
+#endif
             std::cout << "On this platform, a for loop cycle alone takes an average of " << (end - start) / 1000
                       << "\n\n";
 
@@ -136,36 +137,36 @@ int main(int argc, char *argv[]) {
 
 #if CLI_ARGS
 // ----------------------- deal with cli args --------------------------------------------
-    int next_option=0;
+    int next_option = 0;
 
     /* A string listing valid short options letters. */
     const char *const short_options = "hl:i:I:t:c:r:R:H:s:S:M:k:C:g:O:d:T:E:L:v";
 
     /* An array describing valid long options.  */
     const struct option long_options[] = {
-            {"help",             0, nullptr, 'h'},
-            {"logic",            1, nullptr, 'l'},
-            {"parallel-tuning",  2, nullptr, 'p'},
-            {"path1",            1, nullptr, 'i'},
-            {"path2",            2, nullptr, 'I'},
-            {"target-column",    1, nullptr, 't'},
-            {"columns",          1, nullptr, 'c'},
-            {"row1",             1, nullptr, 'r'},
-            {"row2",             2, nullptr, 'R'},
-            {"hyperparameters-path", 2, nullptr, 'H'},
-            {"svm-path",         2, nullptr, 's'},
+            {"help",                  0, nullptr, 'h'},
+            {"logic",                 1, nullptr, 'l'},
+            {"parallel-tuning",       2, nullptr, 'p'},
+            {"path1",                 1, nullptr, 'i'},
+            {"path2",                 2, nullptr, 'I'},
+            {"target-column",         1, nullptr, 't'},
+            {"columns",               1, nullptr, 'c'},
+            {"row1",                  1, nullptr, 'r'},
+            {"row2",                  2, nullptr, 'R'},
+            {"hyperparameters-path",  2, nullptr, 'H'},
+            {"svm-path",              2, nullptr, 's'},
             {"save-dir-path",         2, nullptr, 'S'},
-            {"tuning-table-dir-path",         2, nullptr, 'M'},
-            {"kernel",           2, nullptr, 'k'},
-            {"cost",             2, nullptr, 'C'},
-            {"gamma",            2, nullptr, 'g'},
-            {"coef0",            2, nullptr, 'O'},
-            {"degree",           2, nullptr, 'd'},
-            {"learning_rate",    2, nullptr, 'T'},
-            {"eps",              2, nullptr, 'E'},
-            {"limit",            2, nullptr, 'L'},
-            {"verbose",          0, nullptr, 'v'},
-            {nullptr,               0, nullptr, 0}
+            {"tuning-table-dir-path", 2, nullptr, 'M'},
+            {"kernel",                2, nullptr, 'k'},
+            {"cost",                  2, nullptr, 'C'},
+            {"gamma",                 2, nullptr, 'g'},
+            {"coef0",                 2, nullptr, 'O'},
+            {"degree",                2, nullptr, 'd'},
+            {"learning_rate",         2, nullptr, 'T'},
+            {"eps",                   2, nullptr, 'E'},
+            {"limit",                 2, nullptr, 'L'},
+            {"verbose",               0, nullptr, 'v'},
+            {nullptr,                 0, nullptr, 0}
     };
 
     /**
@@ -179,12 +180,10 @@ int main(int argc, char *argv[]) {
     std::string p2;
 
 
-
     int rows_t = 0;
     int rows_v = 0;
     int target_column = 0;
     int columns = 0;
-
 
 
     char ker_type = DEFAULT_KERNEL;
@@ -197,7 +196,7 @@ int main(int argc, char *argv[]) {
     double eps = DEFAULT_EPS;
 
     bool verbose = false;
-    flag=undefined;
+    flag = undefined;
 
     std::string program_name = argv[0];
 
@@ -214,7 +213,7 @@ int main(int argc, char *argv[]) {
 
         switch (next_option) {
 
-            case 'h':  {
+            case 'h': {
                 /* -h or --help */
                 print_usage(program_name);
                 break;
@@ -222,16 +221,16 @@ int main(int argc, char *argv[]) {
             case 'l': {
                 /* -l or --logic */
                 if (strcmp(optarg, "training") == 0) {
-                    if(process_rank == MASTER_PROCESS) {
-    #if SHOW_LOGTIME
+                    if (process_rank == MASTER_PROCESS) {
+#if SHOW_LOGTIME
                         logtime();
-    #endif
+#endif
                         std::cout << "[INFO] Logic set to training." << std::endl;
                     }
                     flag = training;
                 } else if (strcmp(optarg, "testing") == 0) {
                     flag = testing;
-                    if(process_rank == MASTER_PROCESS) {
+                    if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                         logtime();
 #endif
@@ -239,14 +238,14 @@ int main(int argc, char *argv[]) {
                     }
                 } else if (strcmp(optarg, "tuning") == 0) {
                     flag = tuning;
-                    if(process_rank == MASTER_PROCESS) {
+                    if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                         logtime();
 #endif
                         std::cout << "[INFO] Logic set to tuning." << std::endl;
                     }
                 } else {
-                    if(process_rank == MASTER_PROCESS) {
+                    if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                         logtime();
 #endif
@@ -257,10 +256,10 @@ int main(int argc, char *argv[]) {
                 break;
             }
 
-            case 'p':{   /* -p or --parallel-tuning */
+            case 'p': {   /* -p or --parallel-tuning */
 
                 if (strcmp(optarg, "sequential") == 0) {
-                    if(process_rank == MASTER_PROCESS) {
+                    if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                         logtime();
 #endif
@@ -269,8 +268,8 @@ int main(int argc, char *argv[]) {
                     }
                     tuning_logic = false;
                     logic_set_flag = true;
-                } else if(strcmp(optarg, "split") == 0){
-                    if(process_rank == MASTER_PROCESS) {
+                } else if (strcmp(optarg, "split") == 0) {
+                    if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                         logtime();
 #endif
@@ -278,9 +277,9 @@ int main(int argc, char *argv[]) {
                                 << "[INFO] Tuning logic set to split. Processes will split the available combination.\n";
                     }
                     tuning_logic = true;
-                    logic_set_flag= true;
+                    logic_set_flag = true;
                 } else {
-                    if(process_rank == MASTER_PROCESS) {
+                    if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                         logtime();
 #endif
@@ -297,15 +296,15 @@ int main(int argc, char *argv[]) {
                 break;
             }
 
-            case 'I':{
-                p2=optarg;
+            case 'I': {
+                p2 = optarg;
                 break;
             }
 
             case 't': {
                 /* -t or --target_column */
                 target_column = std::atoi(optarg);
-                if(process_rank == MASTER_PROCESS) {
+                if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
@@ -316,7 +315,7 @@ int main(int argc, char *argv[]) {
 
             case 'c': {  /* -c or --columns */
                 columns = std::atoi(optarg);
-                if(process_rank == MASTER_PROCESS) {
+                if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
@@ -325,7 +324,7 @@ int main(int argc, char *argv[]) {
                 break;
             }
 
-            case 'r':  {
+            case 'r': {
                 rows_t = std::atoi(optarg);
                 break;
             } /* -r or --row1 */
@@ -341,11 +340,11 @@ int main(int argc, char *argv[]) {
             }
 
             case 's': {  /* -s or --svm-path */
-                char* tmp = optarg;
-                if(tmp){
+                char *tmp = optarg;
+                if (tmp) {
                     filepath_svm = optarg;
                 }
-                if(process_rank == MASTER_PROCESS) {
+                if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
@@ -356,7 +355,7 @@ int main(int argc, char *argv[]) {
 
             case 'S': {  /* -s or --svm_path */
                 save_svm_dir_path = optarg;
-                if(process_rank == MASTER_PROCESS) {
+                if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
@@ -367,7 +366,7 @@ int main(int argc, char *argv[]) {
 
             case 'M': {  /* -s or --svm_path */
                 save_tune_dir_path = optarg;
-                if(process_rank == MASTER_PROCESS) {
+                if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
@@ -378,7 +377,7 @@ int main(int argc, char *argv[]) {
 
             case 'k': {  /* -k or --kernel */
                 ker_type = *optarg;
-                if(process_rank == MASTER_PROCESS) {
+                if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
@@ -389,7 +388,7 @@ int main(int argc, char *argv[]) {
 
             case 'C': { /* -C or --cost */
                 Cost = std::stod(optarg);
-                if(process_rank == MASTER_PROCESS) {
+                if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
@@ -400,7 +399,7 @@ int main(int argc, char *argv[]) {
 
             case 'g': { /* -g or --gamma */
                 gamma = std::stod(optarg);
-                if(process_rank == MASTER_PROCESS) {
+                if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
@@ -411,7 +410,7 @@ int main(int argc, char *argv[]) {
 
             case 'O': { /* -O or --coef0 */
                 coef0 = std::stod(optarg);
-                if(process_rank == MASTER_PROCESS) {
+                if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
@@ -422,7 +421,7 @@ int main(int argc, char *argv[]) {
 
             case 'd': { /* -d or --degree */
                 degree = std::stoi(optarg);
-                if(process_rank == MASTER_PROCESS) {
+                if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
@@ -442,7 +441,7 @@ int main(int argc, char *argv[]) {
 
             case 'E': {  /* -E or --eps */
                 eps = std::stod(optarg);
-                if(process_rank == MASTER_PROCESS) {
+                if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
@@ -453,11 +452,11 @@ int main(int argc, char *argv[]) {
 
             case 'L': {  /* -L or --limit */
                 limit = std::stod(optarg);
-                if(process_rank == MASTER_PROCESS) {
+                if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
-                logtime();
+                    logtime();
 #endif
-                std::cout << "[INFO] Limit value set to " << limit << std::endl;
+                    std::cout << "[INFO] Limit value set to " << limit << std::endl;
                 }
                 break;
             }
@@ -468,7 +467,7 @@ int main(int argc, char *argv[]) {
             }
 
             case '?': {  /* The user specified an invalid option */
-                if(process_rank == MASTER_PROCESS) {
+                if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
@@ -493,10 +492,10 @@ int main(int argc, char *argv[]) {
 
     //----------- checks ----------------
 
-    if(!p1.empty()){
+    if (!p1.empty()) {
         if ((flag == training) || (flag == tuning)) {
             filepath_training = std::move(p1);
-            if(process_rank == MASTER_PROCESS) {
+            if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                 logtime();
 #endif
@@ -504,14 +503,14 @@ int main(int argc, char *argv[]) {
             }
         } else if (flag == testing) {
             filepath_testing = std::move(p1);
-            if(process_rank == MASTER_PROCESS) {
+            if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                 logtime();
 #endif
                 std::cout << "[INFO] Testing file path set to " << filepath_testing << std::endl;
             }
         } else {
-            if(process_rank == MASTER_PROCESS) {
+            if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
                 logtime();
 #endif
@@ -520,7 +519,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
     } else {
-        if(process_rank == MASTER_PROCESS) {
+        if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
             logtime();
 #endif
@@ -529,8 +528,8 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    if(!p2.empty()){
-        if(flag != tuning){
+    if (!p2.empty()) {
+        if (flag != tuning) {
 #if SHOW_LOGTIME
             logtime();
 #endif
@@ -548,15 +547,16 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if(!logic_set_flag){
+    if (!logic_set_flag) {
         tuning_logic = rows_t > columns;
-        if(process_rank == MASTER_PROCESS) {
-            std::cout << "\n[WARN] Tuning logic was not supplied, therefore the program will adapt based on the supplied datasets\n";
+        if (process_rank == MASTER_PROCESS) {
+            std::cout
+                    << "\n[WARN] Tuning logic was not supplied, therefore the program will adapt based on the supplied datasets\n";
         }
     }
 
-    if((rows_v!=0) && flag != tuning){
-        if(process_rank == MASTER_PROCESS) {
+    if ((rows_v != 0) && flag != tuning) {
+        if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
             logtime();
 #endif
@@ -566,8 +566,8 @@ int main(int argc, char *argv[]) {
 
     }
 
-    if(target_column==0 || columns==0 || rows_t==0){
-        if(process_rank == MASTER_PROCESS) {
+    if (target_column == 0 || columns == 0 || rows_t == 0) {
+        if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
             logtime();
 #endif
@@ -577,8 +577,8 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    if(flag == undefined){
-        if(process_rank == MASTER_PROCESS) {
+    if (flag == undefined) {
+        if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
             logtime();
 #endif
@@ -587,8 +587,8 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    if(flag == testing && filepath_svm.empty()){
-        if(process_rank == MASTER_PROCESS) {
+    if (flag == testing && filepath_svm.empty()) {
+        if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
             logtime();
 #endif
@@ -597,7 +597,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    if(process_rank == MASTER_PROCESS) {
+    if (process_rank == MASTER_PROCESS) {
 #if SHOW_LOGTIME
         logtime();
 #endif
@@ -653,17 +653,17 @@ int main(int argc, char *argv[]) {
 
     auto *time_checks = (double *) calloc(NUMBER_OF_PERFORMANCE_CHECKS, sizeof(double));
     int time_iterator = 0;
-    if(performance_checks) {
+    if (performance_checks) {
 
         MPI_Barrier(MPI_COMM_WORLD);
         *(time_checks + time_iterator) = MPI_Wtime(); // start
 
 
         if (process_rank == MASTER_PROCESS) {
-    #if SHOW_LOGTIME
+#if SHOW_LOGTIME
             logtime();
-    #endif
-            std::cout << "Program starts at time " << *(time_checks + time_iterator) << "\n" << std::endl;
+#endif
+            std::cout << "[INFO] Program starts at time " << *(time_checks + time_iterator) << "\n" << std::endl;
         }
         ++time_iterator;
     }
@@ -690,7 +690,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "Reading training dataset starts at time " << *(time_checks + time_iterator)
+                    std::cout << "[INFO] Reading training dataset starts at time " << *(time_checks + time_iterator)
                               << std::endl;
                 }
                 ++time_iterator;
@@ -709,13 +709,13 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                    std::cout << "[INFO] It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                               << " seconds\n" << std::endl;
 
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "svm preparation starts at time " << *(time_checks + time_iterator) << std::endl;
+                    std::cout << "[INFO] svm preparation starts at time " << *(time_checks + time_iterator) << std::endl;
                 }
                 ++time_iterator;
             }
@@ -739,12 +739,12 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                    std::cout << "[INFO] It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                               << " seconds\n" << std::endl;
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "Training starts at time " << *(time_checks + time_iterator) << std::endl;
+                    std::cout << "[INFO] Training starts at time " << *(time_checks + time_iterator) << std::endl;
                 }
                 ++time_iterator;
             }
@@ -762,7 +762,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                    std::cout << "[INFO] It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                               << " seconds\n" << std::endl;
                 }
                 ++time_iterator;
@@ -785,7 +785,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "Reading testing dataset starts at time " << *(time_checks + time_iterator)
+                    std::cout << "[INFO] Reading testing dataset starts at time " << *(time_checks + time_iterator)
                               << std::endl;
                 }
                 ++time_iterator;
@@ -801,7 +801,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                    std::cout << "[INFO] It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                               << " seconds\n" << std::endl;
                 }
                 ++time_iterator;
@@ -818,7 +818,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "Reading svm file starts at time " << *(time_checks + time_iterator) << std::endl;
+                    std::cout << "[INFO] Reading svm file starts at time " << *(time_checks + time_iterator) << std::endl;
                 }
                 ++time_iterator;
             }
@@ -833,7 +833,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                    std::cout << "[INFO] It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                               << " seconds\n" << std::endl;
                 }
                 ++time_iterator;
@@ -850,7 +850,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "Parallel test starts at time " << *(time_checks + time_iterator) << std::endl;
+                    std::cout << "[INFO] Parallel test starts at time " << *(time_checks + time_iterator) << std::endl;
                 }
                 ++time_iterator;
             }
@@ -865,7 +865,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+                    std::cout << "[INFO] It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                               << " seconds\n" << std::endl;
                 }
                 ++time_iterator;
@@ -884,13 +884,22 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                 logtime();
 #endif
-                std::cout << "Training Dataset filepath: " << filepath_training << std::endl;
+                std::cout << "[INFO] Training Dataset filepath: " << filepath_training << std::endl;
 
-                std::cout << "The dataset has " << rows_t << " rows and " << columns << " columns." << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] The dataset has " << rows_t << " rows and " << columns << " columns." << std::endl;
 
-                std::cout << "Validation Dataset filepath: " << filepath_validation << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Validation Dataset filepath: " << filepath_validation << std::endl;
 
-                std::cout << "The dataset has " << rows_v << " rows and " << columns << " columns." << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] The dataset has " << rows_v << " rows and " << columns << " columns." << std::endl;
             }
 
 
@@ -901,13 +910,12 @@ int main(int argc, char *argv[]) {
             double *degree_array;
 
             int cost_array_size, gamma_array_size, coef0_array_size, degree_array_size;
-            cost_array = (double *) calloc(sizeof(double) , MAX_HP_VALUES);
-            gamma_array = (double *) calloc(sizeof(double) , MAX_HP_VALUES);
-            coef0_array = (double *) calloc(sizeof(double) , MAX_HP_VALUES);
-            degree_array = (double *) calloc(sizeof(double) , MAX_HP_VALUES);
+            cost_array = (double *) calloc(sizeof(double), MAX_HP_VALUES);
+            gamma_array = (double *) calloc(sizeof(double), MAX_HP_VALUES);
+            coef0_array = (double *) calloc(sizeof(double), MAX_HP_VALUES);
+            degree_array = (double *) calloc(sizeof(double), MAX_HP_VALUES);
 
             if (!hparameters_path.empty()) {
-
 
 
                 cost_array_size = 0;
@@ -928,11 +936,17 @@ int main(int argc, char *argv[]) {
                 defaul = false;
 
             } else {
-                if(process_rank == MASTER_PROCESS) {
-                    std::cout << "\n[WARN] Tuning file was not supplied, using default values\n";
+                if (process_rank == MASTER_PROCESS) {
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[WARN] Tuning file was not supplied, using default values\n";
                 }
 
-                cost_array_size = DEFAULT_COST_SIZE; gamma_array_size = DEFAULT_GAMMA_SIZE; coef0_array_size = DEFAULT_COEF0_SIZE; degree_array_size = DEFAULT_DEGREE_SIZE;
+                cost_array_size = DEFAULT_COST_SIZE;
+                gamma_array_size = DEFAULT_GAMMA_SIZE;
+                coef0_array_size = DEFAULT_COEF0_SIZE;
+                degree_array_size = DEFAULT_DEGREE_SIZE;
 
                 cost_array = DEFAULT_COST_ARRAY;
                 gamma_array = DEFAULT_GAMMA_ARRAY;
@@ -944,21 +958,64 @@ int main(int argc, char *argv[]) {
 
             if (process_rank == MASTER_PROCESS) {
 
-                std::cout << "\n\nCost array size: " << cost_array_size << std::endl;
-                std::cout << "Cost array: " << std::endl;
-                print_vector(cost_array, cost_array_size);
+                std::cout << "\n" << std::endl;
 
-                std::cout << "\n\nGamma array size: " << gamma_array_size << std::endl;
-                std::cout << "Gamma array: " << std::endl;
-                print_vector(gamma_array, gamma_array_size);
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Cost array size: " << cost_array_size << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Cost array:";
 
-                std::cout << "\n\nCoef0 array size: " << coef0_array_size << std::endl;
-                std::cout << "Coef0 array: " << std::endl;
-                print_vector(coef0_array, coef0_array_size);
+                for (int i = 0; i < cost_array_size; i++) {
+                    std::cout << cost_array[i] << " ";
+                }
+                std::cout << std::endl;
 
-                std::cout << "\n\nDegree array size: " << degree_array_size << std::endl;
-                std::cout << "Degree array: " << std::endl;
-                print_vector(degree_array, degree_array_size);
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Gamma array size: " << gamma_array_size << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Gamma array:";
+
+                for (int i = 0; i < gamma_array_size; i++) {
+                    std::cout << gamma_array[i] << " ";
+                }
+                std::cout << std::endl;
+
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Coef0 array size: " << coef0_array_size << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Coef0 array:";
+
+                for (int i = 0; i < coef0_array_size; i++) {
+                    std::cout << coef0_array[i] << " ";
+                }
+                std::cout << std::endl;
+
+
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Degree array size: " << degree_array_size << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Degree array: ";
+
+                for (int i = 0; i < degree_array_size; i++) {
+                    std::cout << degree_array[i] << " ";
+                }
+                std::cout << std::endl;
 
             }
 
@@ -970,7 +1027,6 @@ int main(int argc, char *argv[]) {
             double* coef0_array = DEFAULT_COEF0_ARRAY;
             double* degree_array = DEFAULT_DEGREE_ARRAY;
 
-
 #endif
             if (performance_checks) {
 
@@ -978,10 +1034,13 @@ int main(int argc, char *argv[]) {
                 *(time_checks + time_iterator) = MPI_Wtime();
 
                 if (process_rank == MASTER_PROCESS) {
+
+                    std::cout << "\n" << std::endl;
+
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "\nAllocating inital vectors took "
+                    std::cout << "[INFO] Allocating inital vectors took "
                               << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1) << " seconds\n"
                               << std::endl;
                 }
@@ -991,7 +1050,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "Training dataset read starts at time " << *(time_checks + time_iterator) << "\n"
+                    std::cout << "[INFO] Training dataset read starts at time " << *(time_checks + time_iterator) << "\n"
                               << std::endl;
                 }
                 ++time_iterator; // start tr dataset read
@@ -1009,7 +1068,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "\nReading training dataset took a total of "
+                    std::cout << "[INFO] Reading training dataset took a total of "
                               << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1) << " seconds\n"
                               << std::endl;
                 }
@@ -1018,7 +1077,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "Validation dataset read starts at time " << *(time_checks + time_iterator) << "\n"
+                    std::cout << "[INFO] Validation dataset read starts at time " << *(time_checks + time_iterator) << "\n"
                               << std::endl;
                 }
                 ++time_iterator; // start val dataset read
@@ -1035,7 +1094,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "\nReading validation dataset took "
+                    std::cout << "[INFO] Reading validation dataset took "
                               << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1) << " seconds\n"
                               << std::endl;
                 }
@@ -1043,7 +1102,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "Memory allocation for tuning starts at time " << *(time_checks + time_iterator)
+                    std::cout << "[INFO] Memory allocation for tuning starts at time " << *(time_checks + time_iterator)
                               << "\n"
                               << std::endl;
                 }
@@ -1060,18 +1119,27 @@ int main(int argc, char *argv[]) {
 
             int tuning_table_rows = linear_rows + radial_rows + sigmoid_rows + polynomial_rows;
             int tuning_table_columns = NUMBER_OF_HYPER_PARAMETERS +
-                                        1/* accuracy*/ +
-                                        1/*class 1 accuracy*/ +
-                                        1/*class 2 accuracy*/; // NB: type of kernel will be printed separately
+                                       1/* accuracy*/ +
+                                       1/*class 1 accuracy*/ +
+                                       1/*class 2 accuracy*/; // NB: type of kernel will be printed separately
             if (process_rank == MASTER_PROCESS) {
-                std::cout << "There are a total of " << IMPLEMENTED_KERNELS << " kernels to tune." << std::endl;
-                std::cout << "Tuning will use:\n\t " << cost_array_size << " different costs, " << std::endl;
-                std::cout << "\t " << gamma_array_size << " different gamma, " << std::endl;
-                std::cout << "\t " << coef0_array_size << " different intercepts, " << std::endl;
-                std::cout << "\t " << degree_array_size << " different exponential degrees, " << std::endl;
-                std::cout << "For a total of " << tuning_table_rows << " combinations" << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] There are a total of " << IMPLEMENTED_KERNELS << " kernels to tune." << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Tuning will use: " <<
+                          cost_array_size << " different values for costs, " <<
+                          gamma_array_size << " for gamma, " <<
+                          coef0_array_size << " for intercepts, " <<
+                          degree_array_size << " for exponential degrees" << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] For a total of " << tuning_table_rows << " combinations" << std::endl;
             }
-
 
             auto *final_tuning_table = (double *) calloc(tuning_table_rows * tuning_table_columns,
                                                          sizeof(double)); // matrix
@@ -1088,9 +1156,15 @@ int main(int argc, char *argv[]) {
                 *(time_checks + time_iterator) = MPI_Wtime(); // end of allocations
 
                 if (process_rank == MASTER_PROCESS) {
-                    std::cout << "\n Latest memory allocation ends at time " << *(time_checks + time_iterator)
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Latest memory allocation ends at time " << *(time_checks + time_iterator)
                               << std::endl;
-                    std::cout << "It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                               << " seconds\n" << std::endl;
 
                 }
@@ -1100,11 +1174,17 @@ int main(int argc, char *argv[]) {
 
                 //linear
                 if (process_rank == MASTER_PROCESS) {
-                    std::cout << "Starting linear tuning" << std::endl;
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Starting linear tuning" << std::endl;
                 }
                 tune_linear(&df_train, &df_validation, cost_array, cost_array_size, local_tuning_table, 0,
                             tuning_table_columns, MASTER_PROCESS, world_size, lr, limit, eps, verbose);
-                std::cout << "Process " << process_rank << " has finished linear tuning" << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Process " << process_rank << " has finished linear tuning" << std::endl;
 
                 //radial
                 if (performance_checks) {
@@ -1113,20 +1193,32 @@ int main(int argc, char *argv[]) {
                     *(time_checks + time_iterator) = MPI_Wtime();
 
                     if (process_rank == MASTER_PROCESS) {
-                        std::cout << "\n linear tuning ends at time " << *(time_checks + time_iterator) << std::endl;
-                        std::cout << "\n It took "
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] linear tuning ends at time " << *(time_checks + time_iterator) << std::endl;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] It took "
                                   << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                                   << "seconds\n" << std::endl;
                     }
                     ++time_iterator; // start radial tuning
                 }
                 if (process_rank == MASTER_PROCESS) {
-                    std::cout << "Starting radial tuning" << std::endl;
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Starting radial tuning" << std::endl;
                 }
                 tune_radial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,
                             local_tuning_table, linear_rows, tuning_table_columns, MASTER_PROCESS, world_size, lr,
                             limit, eps, verbose);
-                std::cout << "Process " << process_rank << " has finished radial tuning" << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Process " << process_rank << " has finished radial tuning" << std::endl;
 
                 //sigmoid
                 if (performance_checks) {
@@ -1135,20 +1227,32 @@ int main(int argc, char *argv[]) {
                     *(time_checks + time_iterator) = MPI_Wtime();
 
                     if (process_rank == MASTER_PROCESS) {
-                        std::cout << "\n radial tuning ends at time " << *(time_checks + time_iterator) << std::endl;
-                        std::cout << "\n It took "
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] radial tuning ends at time " << *(time_checks + time_iterator) << std::endl;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] It took "
                                   << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                                   << "seconds\n" << std::endl;
                     }
                     ++time_iterator; // start sigmoid tuning
                 }
                 if (process_rank == MASTER_PROCESS) {
-                    std::cout << "Starting sigmoid tuning" << std::endl;
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Starting sigmoid tuning" << std::endl;
                 }
                 tune_sigmoid(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,
                              coef0_array, coef0_array_size, local_tuning_table, linear_rows + radial_rows,
                              tuning_table_columns, MASTER_PROCESS, world_size);
-                std::cout << "Process " << process_rank << " has finished sigmoid tuning" << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Process " << process_rank << " has finished sigmoid tuning" << std::endl;
 
                 //polynomial
                 if (performance_checks) {
@@ -1157,21 +1261,33 @@ int main(int argc, char *argv[]) {
                     *(time_checks + time_iterator) = MPI_Wtime();
 
                     if (process_rank == MASTER_PROCESS) {
-                        std::cout << "\n sigmoid tuning ends at time " << *(time_checks + time_iterator) << std::endl;
-                        std::cout << "\n It took "
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] sigmoid tuning ends at time " << *(time_checks + time_iterator) << std::endl;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] It took "
                                   << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                                   << "seconds\n" << std::endl;
                     }
                     ++time_iterator; // start polynomial tuning
                 }
                 if (process_rank == MASTER_PROCESS) {
-                    std::cout << "Starting polynomial tuning" << std::endl;
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Starting polynomial tuning" << std::endl;
                 }
                 tune_polynomial(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,
                                 coef0_array, coef0_array_size, degree_array, degree_array_size, local_tuning_table,
                                 linear_rows + radial_rows + sigmoid_rows, tuning_table_columns, MASTER_PROCESS,
                                 world_size);
-                std::cout << "Process " << process_rank << " has finished polynomial tuning" << std::endl;
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Process " << process_rank << " has finished polynomial tuning" << std::endl;
                 if (performance_checks) {
 
                     MPI_Barrier
@@ -1179,12 +1295,21 @@ int main(int argc, char *argv[]) {
                     *(time_checks + time_iterator) = MPI_Wtime();
 
                     if (process_rank == MASTER_PROCESS) {
-                        std::cout << "\n polynomial tuning ends at time " << *(time_checks + time_iterator)
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] polynomial tuning ends at time " << *(time_checks + time_iterator)
                                   << std::endl;
-                        std::cout << "\n It took "
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] It took "
                                   << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                                   << "seconds\n" << std::endl;
-                        std::cout << "\nStarting reduce\n" << std::endl;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Starting reduce" << std::endl;
                     }
                     ++time_iterator; // start reduce
                 }
@@ -1198,8 +1323,14 @@ int main(int argc, char *argv[]) {
                     *(time_checks + time_iterator) = MPI_Wtime();
 
                     if (process_rank == MASTER_PROCESS) {
-                        std::cout << "\n Reduce ends at time " << *(time_checks + time_iterator) << std::endl;
-                        std::cout << "\n It took "
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Reduce ends at time " << *(time_checks + time_iterator) << std::endl;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] It took "
                                   << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                                   << "seconds\n" << std::endl;
                     }
@@ -1220,9 +1351,15 @@ int main(int argc, char *argv[]) {
                     *(time_checks + time_iterator) = MPI_Wtime(); // end of allocations
 
                     if (process_rank == MASTER_PROCESS) {
-                        std::cout << "\n Latest memory allocation ends at time " << *(time_checks + time_iterator)
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Latest memory allocation ends at time " << *(time_checks + time_iterator)
                                   << std::endl;
-                        std::cout << "It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] It took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                                   << " seconds\n" << std::endl;
 
                     }
@@ -1232,12 +1369,18 @@ int main(int argc, char *argv[]) {
 
                 //linear
                 if (process_rank == MASTER_PROCESS) {
-                    std::cout << "Starting linear tuning" << std::endl;
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Starting linear tuning" << std::endl;
                 }
                 tune_linear2(&df_train, &df_validation, cost_array, cost_array_size, local_tuning_table, 0,
                              tuning_table_columns, MASTER_PROCESS, world_size, lr, limit, eps, verbose);
-                if(process_rank==MASTER_PROCESS) {
-                    std::cout << "Processes have finished linear tuning" << std::endl;
+                if (process_rank == MASTER_PROCESS) {
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Processes have finished linear tuning" << std::endl;
                 }
 
                 //radial
@@ -1247,21 +1390,33 @@ int main(int argc, char *argv[]) {
                     *(time_checks + time_iterator) = MPI_Wtime();
 
                     if (process_rank == MASTER_PROCESS) {
-                        std::cout << "\n linear tuning ends at time " << *(time_checks + time_iterator) << std::endl;
-                        std::cout << "\n It took "
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] linear tuning ends at time " << *(time_checks + time_iterator) << std::endl;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] It took "
                                   << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                                   << "seconds\n" << std::endl;
                     }
                     ++time_iterator; // start radial tuning
                 }
                 if (process_rank == MASTER_PROCESS) {
-                    std::cout << "Starting radial tuning" << std::endl;
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Starting radial tuning" << std::endl;
                 }
                 tune_radial2(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,
                              local_tuning_table, linear_rows, tuning_table_columns, MASTER_PROCESS, world_size, lr,
                              limit, eps, verbose);
-                if(process_rank==MASTER_PROCESS) {
-                    std::cout << "Processes have finished linear tuning" << std::endl;
+                if (process_rank == MASTER_PROCESS) {
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Processes have finished linear tuning" << std::endl;
                 }
 
                 //sigmoid
@@ -1270,21 +1425,33 @@ int main(int argc, char *argv[]) {
                     *(time_checks + time_iterator) = MPI_Wtime();
 
                     if (process_rank == MASTER_PROCESS) {
-                        std::cout << "\n radial tuning ends at time " << *(time_checks + time_iterator) << std::endl;
-                        std::cout << "\n It took "
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] radial tuning ends at time " << *(time_checks + time_iterator) << std::endl;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] It took "
                                   << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                                   << "seconds\n" << std::endl;
                     }
                     ++time_iterator; // start sigmoid tuning
                 }
                 if (process_rank == MASTER_PROCESS) {
-                    std::cout << "Starting sigmoid tuning" << std::endl;
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Starting sigmoid tuning" << std::endl;
                 }
                 tune_sigmoid2(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,
                               coef0_array, coef0_array_size, local_tuning_table, linear_rows + radial_rows,
                               tuning_table_columns, MASTER_PROCESS, world_size);
-                if(process_rank==MASTER_PROCESS) {
-                    std::cout << "Processes have finished linear tuning" << std::endl;
+                if (process_rank == MASTER_PROCESS) {
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Processes have finished linear tuning" << std::endl;
                 }
 
                 //polynomial
@@ -1294,22 +1461,34 @@ int main(int argc, char *argv[]) {
                     *(time_checks + time_iterator) = MPI_Wtime();
 
                     if (process_rank == MASTER_PROCESS) {
-                        std::cout << "\n sigmoid tuning ends at time " << *(time_checks + time_iterator) << std::endl;
-                        std::cout << "\n It took "
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] sigmoid tuning ends at time " << *(time_checks + time_iterator) << std::endl;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] It took "
                                   << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                                   << "seconds\n" << std::endl;
                     }
                     ++time_iterator; // start polynomial tuning
                 }
                 if (process_rank == MASTER_PROCESS) {
-                    std::cout << "Starting polynomial tuning" << std::endl;
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Starting polynomial tuning" << std::endl;
                 }
                 tune_polynomial2(&df_train, &df_validation, cost_array, cost_array_size, gamma_array, gamma_array_size,
                                  coef0_array, coef0_array_size, degree_array, degree_array_size, local_tuning_table,
                                  linear_rows + radial_rows + sigmoid_rows, tuning_table_columns, MASTER_PROCESS,
                                  world_size);
-                if(process_rank==MASTER_PROCESS) {
-                    std::cout << "Processes have finished linear tuning" << std::endl;
+                if (process_rank == MASTER_PROCESS) {
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[INFO] Processes have finished linear tuning" << std::endl;
                 }
                 if (performance_checks) {
 
@@ -1318,12 +1497,21 @@ int main(int argc, char *argv[]) {
                     *(time_checks + time_iterator) = MPI_Wtime();
 
                     if (process_rank == MASTER_PROCESS) {
-                        std::cout << "\n polynomial tuning ends at time " << *(time_checks + time_iterator)
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] polynomial tuning ends at time " << *(time_checks + time_iterator)
                                   << std::endl;
-                        std::cout << "\n It took "
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] It took "
                                   << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                                   << "seconds\n" << std::endl;
-                        std::cout << "\nStarting reduce\n" << std::endl;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Starting reduce\n" << std::endl;
                     }
                     ++time_iterator; // start reduce
                 }
@@ -1334,7 +1522,13 @@ int main(int argc, char *argv[]) {
                     *(time_checks + time_iterator) = MPI_Wtime();
 
                     if (process_rank == MASTER_PROCESS) {
-                        std::cout << "\n Reduce ends at time " << *(time_checks + time_iterator) << std::endl;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
+                        std::cout << "[INFO] Reduce ends at time " << *(time_checks + time_iterator) << std::endl;
+#if SHOW_LOGTIME
+                        logtime();
+#endif
                         std::cout << "\n It took "
                                   << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                                   << "seconds\n" << std::endl;
@@ -1350,7 +1544,7 @@ int main(int argc, char *argv[]) {
 #endif
             }
 
-            if(!defaul) {
+            if (!defaul) {
                 free(cost_array);
                 cost_array = nullptr;
                 free(gamma_array);
@@ -1364,13 +1558,26 @@ int main(int argc, char *argv[]) {
             if (process_rank == MASTER_PROCESS) {
 
 
-                if(save_tune_dir_path.empty()){
-                    std::cout << "[WARN] Tuning save path was not passed, therefore the tuning table will be saved in the current directory" << std::endl;
+                if (save_tune_dir_path.empty()) {
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout
+                            << "[WARN] Tuning save path was not passed, therefore the tuning table will be saved in the current directory"
+                            << std::endl;
                 }
-                std::cout << "Starting tuning table save" << std::endl;
-                control += save_tuning_table(save_tune_dir_path, final_tuning_table, tuning_table_rows, tuning_table_columns, linear_rows, radial_rows, sigmoid_rows, polynomial_rows);
-                if(control > 0){
-                    std::cout << "Error while saving tuning table\n";
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Starting tuning table save" << std::endl;
+                control += save_tuning_table(save_tune_dir_path, final_tuning_table, tuning_table_rows,
+                                             tuning_table_columns, linear_rows, radial_rows, sigmoid_rows,
+                                             polynomial_rows);
+                if (control > 0) {
+#if SHOW_LOGTIME
+                    logtime();
+#endif
+                    std::cout << "[ERROR] Error while saving tuning table\n";
                 }
 // --------------------------------------------------- error is inside here ---------------------------------------------------------------------------------------------
                 // if (performance_checks) {
@@ -1396,17 +1603,25 @@ int main(int argc, char *argv[]) {
                 auto *m = std::max_element(accuracies, accuracies + tuning_table_rows);
                 int row_index = (int) (m - accuracies);
                 double max_accuracy = *m;
-                std::cout << "Best Accuracy: " << max_accuracy << std::endl;
+
+                std::cout << "\n" << std::endl;
+
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Best Accuracy: " << max_accuracy << std::endl;
                 auto *best_row = (double *) calloc(tuning_table_columns, sizeof(double));
                 get_row(final_tuning_table, row_index, tuning_table_columns, best_row);
-
-                std::cout << "Best combination:\n\tKernel Cost Gamma Coef0 Degree Accuracy C1_Acc. C2_Acc."
+#if SHOW_LOGTIME
+                logtime();
+#endif
+                std::cout << "[INFO] Best combination:\n\tKernel\tCost\tGamma\tCoef0\tDegree\tTotAcc.\tC1Acc.\tC2Acc."
                           << std::endl;
 
                 char out_kernel;
 
                 out_kernel = decide_kernel(row_index, linear_rows, radial_rows, sigmoid_rows, polynomial_rows);
-                std::cout << "\t" <<get_extended_kernel_name(out_kernel) << " ";
+                std::cout << "\t" << get_extended_kernel_name(out_kernel) << " ";
 
                 print_vector(best_row, tuning_table_columns, false);
                 // todo: save data somewhere
@@ -1417,48 +1632,51 @@ int main(int argc, char *argv[]) {
             }
 
 
-
             free(local_tuning_table);
-            local_tuning_table= nullptr;
+            local_tuning_table = nullptr;
 
             free(final_tuning_table);
-            final_tuning_table= nullptr;
+            final_tuning_table = nullptr;
 
             break;
 
         }
 
         case train_flag::undefined:
+#if SHOW_LOGTIME
+            logtime();
+#endif
             std::cout << "[ERROR] Program logic was not passed!";
             exit(1);
     }
 
 
-
-    if(performance_checks) {
+    if (performance_checks) {
 
         control = MPI_Barrier(MPI_COMM_WORLD);
-        if(control != MPI_SUCCESS){exit(1);}
+        if (control != MPI_SUCCESS) { exit(1); }
 
         *(time_checks + time_iterator) = MPI_Wtime();
 
 
         if (process_rank == MASTER_PROCESS) {
+
+            std::cout << std::endl;
+
 #if SHOW_LOGTIME
             logtime();
 #endif
-            std::cout << "Program ends at time " << *(time_checks + time_iterator) << std::endl;
+            std::cout << "[INFO] Program ends at time " << *(time_checks + time_iterator) << std::endl;
 #if SHOW_LOGTIME
             logtime();
 #endif
-            std::cout << "Last step took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
+            std::cout << "[INFO] Last step took " << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                       << " seconds\n" << std::endl;
         }
         // ++time_iterator; // end
     }
 
     free(time_checks);
-
 
 
     MPI_Finalize();

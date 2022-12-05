@@ -9,7 +9,7 @@ An example of the program usage is the following:
 
 ```bash
 mpiexec -np 8 ./cmake-build-debug/hpc2022 -l tuning \
-                    -i ./data/iris_train.csv \
+                    -i ./data/iris_training.csv \
                     -I ./data/iris_validation.csv \
                     -H hyperparameters.json \
                     -r 70 -R 30 -c 5 -t 5

@@ -133,15 +133,18 @@ void modify_matrix_value(double *x, double value, unsigned int row, unsigned int
     *(x + index(row, column, column_width)) = value;
 }
 
-void set_row_values(double *x, const double *row_values, unsigned int row, unsigned int column_width) {
-    // TODO: search for a better approach
+/* Problems on cluster, not used anyway ---------------------------------------------------------------------------- */
 
-    memcpy(x + index(row, 0, column_width), row_values, column_width);
-    // for(int i=0; i < column_width; i++){
-    //     modify_matrix_value(x, *(row_values + i), row, i, column_width);
-    // }
-}
+//void set_row_values(double *x, const double *row_values, unsigned int row, unsigned int column_width) {
+//    // TODO: search for a better approach
+//
+//    memcpy(x + index(row, 0, column_width), row_values, column_width);
+//    // for(int i=0; i < column_width; i++){
+//    //     modify_matrix_value(x, *(row_values + i), row, i, column_width);
+//    // }
+//}
 
+/* ----------------------------------------------------------------------------------------------------------------- */
 
 /**
  * Presentation
@@ -170,7 +173,7 @@ void print_vector(T *x, unsigned int rows, bool metadata = false) {
 
     for (unsigned int i = 0; i < rows; i++) {
 
-        std::cout << x[i] << ", ";
+        std::cout << x[i] << "\t";
 
     }
     std::cout << std::endl;

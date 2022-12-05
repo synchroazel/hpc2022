@@ -78,7 +78,7 @@ Dataset read_dataset(const std::string &filepath, int rows, int columns, int tar
 
         if (process_rank == MASTER_PROCESS) {
             logtime();
-            std::cout << "Case 1: Each process reads up to " << rows_per_process << " rows and all columns"
+            std::cout << "[INFO] Case 1: Each process reads up to " << rows_per_process << " rows and all columns"
                       << std::endl;
         }
 
@@ -89,7 +89,7 @@ Dataset read_dataset(const std::string &filepath, int rows, int columns, int tar
 
         if (process_rank == MASTER_PROCESS) {
             logtime();
-            std::cout << "Case 2: Each process reads all rows and up to " << cols << " columns" << std::endl;
+            std::cout << "[INFO] Case 2: Each process reads all rows and up to " << cols << " columns" << std::endl;
         }
 
     } else if (world_size <= rows * columns) {
@@ -107,7 +107,7 @@ Dataset read_dataset(const std::string &filepath, int rows, int columns, int tar
 
         if (process_rank == MASTER_PROCESS) {
             logtime();
-            std::cout << "Case 3: Each process reads up to " << rows_per_process << " rows and " << cols_per_process
+            std::cout << "[INFO] Case 3: Each process reads up to " << rows_per_process << " rows and " << cols_per_process
                       << " columns" << std::endl;
         }
 
@@ -118,13 +118,13 @@ Dataset read_dataset(const std::string &filepath, int rows, int columns, int tar
 
         if (process_rank == MASTER_PROCESS) {
             logtime();
-            std::cout << "Case 4: Each process reads element. You should consider linear read" << std::endl;
+            std::cout << "[INFO] Case 4: Each process reads element. You should consider linear read" << std::endl;
         }
     }
 
     if (process_rank == MASTER_PROCESS) {
         logtime();
-        std::cout << "There are a total of " << world_size << " processes." << std::endl;
+        std::cout << "[INFO] There are a total of " << world_size << " processes.\n" << std::endl;
     }
 
     auto *final_x = (double *) calloc(rows * columns, sizeof(double));
