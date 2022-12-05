@@ -491,15 +491,18 @@ void tune_linear2(Dataset *df_train,
         // TODO: change to parallel
         parallel_test(*df_validation, &svm, process_offset, available_processes);
 
+        if(current_process == process_offset) {
 
-        result_table[index(offset + i, 0, result_table_columns)] = params[0];
-        result_table[index(offset + i , 1, result_table_columns)] = params[1];
-        result_table[index(offset + i , 2, result_table_columns)] = params[2];
-        result_table[index(offset + i , 3, result_table_columns)] = params[3];
 
-        result_table[index(offset + i , 4, result_table_columns)] = svm.accuracy;
-        result_table[index(offset + i , 5, result_table_columns)] = svm.accuracy_c1;
-        result_table[index(offset + i , 6, result_table_columns)] = svm.accuracy_c2;
+            result_table[index(offset + i, 0, result_table_columns)] = params[0];
+            result_table[index(offset + i, 1, result_table_columns)] = params[1];
+            result_table[index(offset + i, 2, result_table_columns)] = params[2];
+            result_table[index(offset + i, 3, result_table_columns)] = params[3];
+
+            result_table[index(offset + i, 4, result_table_columns)] = svm.accuracy;
+            result_table[index(offset + i, 5, result_table_columns)] = svm.accuracy_c1;
+            result_table[index(offset + i, 6, result_table_columns)] = svm.accuracy_c2;
+        }
 
         free(svm.arr_alpha_s);
         free(svm.arr_alpha_s_in);
@@ -555,15 +558,16 @@ void tune_radial2(Dataset *df_train,
             // TODO: change to parallel
             parallel_test(*df_validation, &svm, process_offset, available_processes);
 
-            result_table[index(offset + i, 0, result_table_columns)] = params[0];
-            result_table[index(offset + i, 1, result_table_columns)] = params[1];
-            result_table[index(offset + i, 2, result_table_columns)] = params[2];
-            result_table[index(offset + i, 3, result_table_columns)] = params[3];
+            if(current_process == process_offset) {
+                result_table[index(offset + i, 0, result_table_columns)] = params[0];
+                result_table[index(offset + i, 1, result_table_columns)] = params[1];
+                result_table[index(offset + i, 2, result_table_columns)] = params[2];
+                result_table[index(offset + i, 3, result_table_columns)] = params[3];
 
-            result_table[index(offset + i, 4, result_table_columns)] = svm.accuracy;
-            result_table[index(offset + i, 5, result_table_columns)] = svm.accuracy_c1;
-            result_table[index(offset + i, 6, result_table_columns)] = svm.accuracy_c2;
-
+                result_table[index(offset + i, 4, result_table_columns)] = svm.accuracy;
+                result_table[index(offset + i, 5, result_table_columns)] = svm.accuracy_c1;
+                result_table[index(offset + i, 6, result_table_columns)] = svm.accuracy_c2;
+            }
             free(svm.arr_alpha_s);
             free(svm.arr_alpha_s_in);
             free(svm.arr_xs);
@@ -622,15 +626,23 @@ void tune_sigmoid2(Dataset *df_train,
                 // TODO: change to parallel
                 parallel_test(*df_validation, &svm, process_offset, available_processes);
 
-                result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 0, result_table_columns)] = params[0];
-                result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 1, result_table_columns)] = params[1];
-                result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 2, result_table_columns)] = params[2];
-                result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 3, result_table_columns)] = params[3];
+                if(current_process == process_offset) {
+                    result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 0,
+                                       result_table_columns)] = params[0];
+                    result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 1,
+                                       result_table_columns)] = params[1];
+                    result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 2,
+                                       result_table_columns)] = params[2];
+                    result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 3,
+                                       result_table_columns)] = params[3];
 
-                result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 4, result_table_columns)] = svm.accuracy;
-                result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 5, result_table_columns)] = svm.accuracy_c1;
-                result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 6, result_table_columns)] = svm.accuracy_c2;
-
+                    result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 4,
+                                       result_table_columns)] = svm.accuracy;
+                    result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 5,
+                                       result_table_columns)] = svm.accuracy_c1;
+                    result_table[index(offset + i * gamma_array_size * coef0_array_size + j * coef0_array_size + k, 6,
+                                       result_table_columns)] = svm.accuracy_c2;
+                }
                 free(svm.arr_alpha_s);
                 free(svm.arr_alpha_s_in);
                 free(svm.arr_xs);
@@ -693,15 +705,16 @@ void tune_polynomial2(Dataset *df_train,
                     // TODO: change to parallel
                     parallel_test(*df_validation, &svm, process_offset, available_processes);
 
-                    result_table[index(offset + i, 0, result_table_columns)] = params[0];
-                    result_table[index(offset + i, 1, result_table_columns)] = params[1];
-                    result_table[index(offset + i, 2, result_table_columns)] = params[2];
-                    result_table[index(offset + i, 3, result_table_columns)] = params[3];
+                    if(current_process == process_offset) {
+                        result_table[index(offset + i, 0, result_table_columns)] = params[0];
+                        result_table[index(offset + i, 1, result_table_columns)] = params[1];
+                        result_table[index(offset + i, 2, result_table_columns)] = params[2];
+                        result_table[index(offset + i, 3, result_table_columns)] = params[3];
 
-                    result_table[index(offset + i, 4, result_table_columns)] = svm.accuracy;
-                    result_table[index(offset + i, 5, result_table_columns)] = svm.accuracy_c1;
-                    result_table[index(offset + i, 6, result_table_columns)] = svm.accuracy_c2;
-
+                        result_table[index(offset + i, 4, result_table_columns)] = svm.accuracy;
+                        result_table[index(offset + i, 5, result_table_columns)] = svm.accuracy_c1;
+                        result_table[index(offset + i, 6, result_table_columns)] = svm.accuracy_c2;
+                    }
                     free(svm.arr_alpha_s);
                     free(svm.arr_alpha_s_in);
                     free(svm.arr_xs);

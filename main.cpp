@@ -1631,10 +1631,10 @@ int main(int argc, char *argv[]) {
 
             }
 
-
-            free(local_tuning_table);
-            local_tuning_table = nullptr;
-
+            if(tuning_logic) {
+                free(local_tuning_table);
+                local_tuning_table = nullptr;
+            }
             free(final_tuning_table);
             final_tuning_table = nullptr;
 
