@@ -464,9 +464,9 @@ int main(int argc, char *argv[]) {
 
     // program path
     if(optimized){
-        program_path = "~/hpc2022/cmake-build-debug/hpc2022 ";
+        program_path = " ~/hpc2022/cmake-build-debug/hpc2022 ";
     } else {
-        program_path = "~/hpc2022/cmake-build-optimized/hpc2022 ";
+        program_path = " ~/hpc2022/cmake-build-optimized/hpc2022 ";
     }
     read_rows_columns(row_col_filepath, row1, row2, row3, columns);
     if(logic == "training"){

@@ -8,7 +8,7 @@ export PERFORMANCE_CHECKS=TRUE
 
 
 
-mpirun.actual -np 64~/hpc2022/cmake-build-optimized/hpc2022 -l tuning \
+mpirun.actual -np 64 ~/hpc2022/cmake-build-optimized/hpc2022 -l tuning \
 				-i ./data/gene_expr_training.csv \
 				-I ./data/gene_expr_validation.csv \
 				-r 55 				-R 16 -c 2001 -t 2001 \
