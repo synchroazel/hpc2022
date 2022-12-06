@@ -15,4 +15,7 @@ target_link_libraries(hpc2022 PUBLIC MPI::MPI_CXX)
 include_directories("/opt/homebrew/include")
 include_directories("/opt/homebrew/Cellar/libomp/15.0.5/include")
 
+# for boost libraries inside they cluster
+include_directories("~/include")
+
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
