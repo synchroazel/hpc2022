@@ -11,7 +11,7 @@ def load_data(path):
     df_validation = df.iloc[int(len(df) * 0.7):int(len(df) * 0.9)]
     df_test = df.iloc[int(len(df) * 0.9):]
 
-    basename = os.path.basename(path).replace('.csv',"")
+    basename = os.path.basename(path).replace('.csv', "")
     dir = os.path.dirname(path)
 
     df_training.to_csv(f'{dir}/{basename}_training.csv', header=False, index=False)

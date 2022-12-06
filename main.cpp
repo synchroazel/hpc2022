@@ -1529,7 +1529,7 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                         logtime();
 #endif
-                        std::cout << "\n It took "
+                        std::cout << "[INFO] It took "
                                   << *(time_checks + time_iterator) - *(time_checks + time_iterator - 1)
                                   << "seconds\n" << std::endl;
                     }
