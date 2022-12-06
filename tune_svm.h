@@ -493,7 +493,6 @@ void tune_linear2(Dataset *df_train,
 
         if(current_process == process_offset) {
 
-
             result_table[index(offset + i, 0, result_table_columns)] = params[0];
             result_table[index(offset + i, 1, result_table_columns)] = params[1];
             result_table[index(offset + i, 2, result_table_columns)] = params[2];
@@ -705,15 +704,16 @@ void tune_polynomial2(Dataset *df_train,
                     // TODO: change to parallel
                     parallel_test(*df_validation, &svm, process_offset, available_processes);
 
-                    if(current_process == process_offset) {
-                        result_table[index(offset + i, 0, result_table_columns)] = params[0];
-                        result_table[index(offset + i, 1, result_table_columns)] = params[1];
-                        result_table[index(offset + i, 2, result_table_columns)] = params[2];
-                        result_table[index(offset + i, 3, result_table_columns)] = params[3];
+                    if(current_process == process_offset)
+                    {
+                        result_table[index(offset + i * gamma_array_size * coef0_array_size * degree_array_size + j * coef0_array_size * degree_array_size + k * degree_array_size + l, 0, result_table_columns)] = params[0];
+                        result_table[index(offset + i * gamma_array_size * coef0_array_size * degree_array_size + j * coef0_array_size * degree_array_size + k * degree_array_size + l, 1, result_table_columns)] = params[1];
+                        result_table[index(offset + i * gamma_array_size * coef0_array_size * degree_array_size + j * coef0_array_size * degree_array_size + k * degree_array_size + l, 2, result_table_columns)] = params[2];
+                        result_table[index(offset + i * gamma_array_size * coef0_array_size * degree_array_size + j * coef0_array_size * degree_array_size + k * degree_array_size + l, 3, result_table_columns)] = params[3];
 
-                        result_table[index(offset + i, 4, result_table_columns)] = svm.accuracy;
-                        result_table[index(offset + i, 5, result_table_columns)] = svm.accuracy_c1;
-                        result_table[index(offset + i, 6, result_table_columns)] = svm.accuracy_c2;
+                        result_table[index(offset + i * gamma_array_size * coef0_array_size * degree_array_size + j * coef0_array_size * degree_array_size + k * degree_array_size + l, 4, result_table_columns)] = svm.accuracy;
+                        result_table[index(offset + i * gamma_array_size * coef0_array_size * degree_array_size + j * coef0_array_size * degree_array_size + k * degree_array_size + l, 5, result_table_columns)] = svm.accuracy_c1;
+                        result_table[index(offset + i * gamma_array_size * coef0_array_size * degree_array_size + j * coef0_array_size * degree_array_size + k * degree_array_size + l, 6, result_table_columns)] = svm.accuracy_c2;
                     }
                     free(svm.arr_alpha_s);
                     free(svm.arr_alpha_s_in);

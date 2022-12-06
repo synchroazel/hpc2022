@@ -51,7 +51,7 @@ To build the optimized version (<tt>-O2</tt> flag), run the following:
 
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" -DCMAKE_CXX_FLAGS="-O2" -S ./ -B ./cmake-build-optimized
-cmake --build cmake-build-optimized --target all -j 8t
+cmake --build cmake-build-optimized --target all -j 8
 ```
 
 ### Submit job request
