@@ -32,21 +32,9 @@ std::string read_env_var(const std::string &name) {
     return ris;
 }
 
-// TODO: what about boost bint? wth?
-
 enum train_flag {
     training = 0, testing = 1, tuning = 2, undefined = -1
 } flag;
-
-
-//  TODO:
-//        next steps:
-//                  hybrid open_mp
-//        debug:
-//                  cli args
-//                  svm test
-//                  mpi logic for train and test
-
 
 #if CLI_ARGS
 
@@ -140,13 +128,13 @@ int main(int argc, char *argv[]) {
     int next_option = 0;
 
     /* A string listing valid short options letters. */
-    const char *const short_options = "hl:i:I:t:c:r:R:H:s:S:M:k:C:g:O:d:T:E:L:v";
+    const char *const short_options = "l:p:i:I:t:c:r:R:H:s:S:M:k:C:g:O:d:T:E:L:vh";
 
     /* An array describing valid long options.  */
     const struct option long_options[] = {
             {"help",                  0, nullptr, 'h'},
             {"logic",                 1, nullptr, 'l'},
-            {"parallel-tuning",       2, nullptr, 'p'},
+            {"parallel-tuning",       1, nullptr, 'p'},
             {"path1",                 1, nullptr, 'i'},
             {"path2",                 2, nullptr, 'I'},
             {"target-column",         1, nullptr, 't'},
@@ -218,6 +206,7 @@ int main(int argc, char *argv[]) {
                 print_usage(program_name);
                 break;
             }
+
             case 'l': {
                 /* -l or --logic */
                 if (strcmp(optarg, "training") == 0) {
@@ -324,10 +313,10 @@ int main(int argc, char *argv[]) {
                 break;
             }
 
-            case 'r': {
+            case 'r': {  /* -r or --row1 */
                 rows_t = std::atoi(optarg);
                 break;
-            } /* -r or --row1 */
+            }
 
             case 'R': {   /* -R or --row2 */
                 rows_v = std::atoi(optarg);
@@ -471,10 +460,11 @@ int main(int argc, char *argv[]) {
 #if SHOW_LOGTIME
                     logtime();
 #endif
-                    std::cout << "\n[WARN] You entered an invalid option." << std::endl;
+                    std::cout << "[WARN] You entered an invalid option." << std::endl;
+
                 }
-                // print_usage(1);
-            } // ?
+                print_usage(program_name);
+            }
 
             case -1: {   /* Done with options */
                 break;
@@ -1186,6 +1176,10 @@ int main(int argc, char *argv[]) {
 #endif
                 std::cout << "[INFO] Process " << process_rank << " has finished linear tuning" << std::endl;
 
+
+                MPI_Barrier(MPI_COMM_WORLD);
+
+
                 //radial
                 if (performance_checks) {
 
@@ -1313,6 +1307,9 @@ int main(int argc, char *argv[]) {
                     }
                     ++time_iterator; // start reduce
                 }
+
+
+
 
                 MPI_Reduce(local_tuning_table, final_tuning_table, (int) (tuning_table_rows * tuning_table_columns),
                            MPI_DOUBLE, MPI_SUM, MASTER_PROCESS, MPI_COMM_WORLD);

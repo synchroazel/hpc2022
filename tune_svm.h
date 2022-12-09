@@ -156,9 +156,12 @@ void tune_linear(Dataset *df_train,
         result_table[index(offset + i , 2, result_table_columns)] = params[2];
         result_table[index(offset + i , 3, result_table_columns)] = params[3];
 
+        // std::cout << "\n Process " << current_process << " about the insert accs: " << svm.accuracy << " " << svm.accuracy_c1 << " " << svm.accuracy_c2 << std::endl;
+
         result_table[index(offset + i , 4, result_table_columns)] = svm.accuracy;
         result_table[index(offset + i , 5, result_table_columns)] = svm.accuracy_c1;
         result_table[index(offset + i , 6, result_table_columns)] = svm.accuracy_c2;
+
         free(svm.arr_alpha_s);
         free(svm.arr_alpha_s_in);
         free(svm.arr_xs);

@@ -493,21 +493,20 @@ void serial_test(Dataset test_data,
     svm->correct_c1 = 0;
     for (i = 0; i < c1; i++) {
         result = (int) g(svm, class1_data + index(i, 0, test_data.predictors_column_number));
-        if (result == -1) {
+        if (result == 1) {
             ++svm->correct_c1;
         }
     }
 
     svm->correct_c2 = 0;
-    for (i = 0; i < c1; i++) {
+    for (i = 0; i < c2; i++) {
         result = (int) g(svm, class2_data + index(i, 0, test_data.predictors_column_number));
-        if (result == 1) {
+        if (result == -1) {
             ++svm->correct_c2;
         }
     }
 
-    svm->accuracy =
-            (double) (svm->correct_c1 + svm->correct_c2) / (double) (c1 + c2);
+    svm->accuracy = (double) (svm->correct_c1 + svm->correct_c2) / (double) (c1 + c2);
     svm->accuracy_c1 = (double) svm->correct_c1 / (double) c1;
     svm->accuracy_c2 = (double) svm->correct_c2 / (double) c2;
 
@@ -1140,21 +1139,20 @@ void parallel_test(Dataset test_data,
     svm->correct_c1 = 0;
     for (i = 0; i < c1; i++) {
         result = (int) g_parallel(svm, class1_data + index(i, 0, test_data.predictors_column_number), process_offset, available_processes);
-        if (result == -1) {
+        if (result == 1) {
             ++svm->correct_c1;
         }
     }
 
     svm->correct_c2 = 0;
-    for (i = 0; i < c1; i++) {
+    for (i = 0; i < c2; i++) {
         result = (int) g_parallel(svm, class2_data + index(i, 0, test_data.predictors_column_number), process_offset, available_processes);
-        if (result == 1) {
+        if (result == -1) {
             ++svm->correct_c2;
         }
     }
 
-    svm->accuracy =
-            (double) (svm->correct_c1 + svm->correct_c2) / (double) (c1 + c2);
+    svm->accuracy = (double) (svm->correct_c1 + svm->correct_c2) / (double) (c1 + c2);
     svm->accuracy_c1 = (double) svm->correct_c1 / (double) c1;
     svm->accuracy_c2 = (double) svm->correct_c2 / (double) c2;
 
@@ -1169,11 +1167,9 @@ void parallel_test(Dataset test_data,
         std::cout << "  accuracy-all:\t\t" << std::setprecision(6) << svm->accuracy << " ("
                   << svm->correct_c1 + svm->correct_c2 << "/" << c1 + c2 << " hits)" << std::endl;
         std::cout << "  accuracy-class1:\t" << std::setprecision(6) << svm->accuracy_c1 << " (" << svm->correct_c1
-                  << "/"
-                  << c1 << " hits)" << std::endl;
+                  << "/" << c1 << " hits)" << std::endl;
         std::cout << "  accuracy-class2:\t" << std::setprecision(6) << svm->accuracy_c2 << " (" << svm->correct_c2
-                  << "/"
-                  << c2 << " hits)" << std::endl;
+                  << "/" << c2 << " hits)" << std::endl;
         std::cout << "└─────────────────────────────────────────────────┘\n" << std::endl;
     }
 
