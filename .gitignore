@@ -12,6 +12,7 @@ mpi_*
 **/*.bak*
 **/*.svm
 results.txt
+tuning_table*
 
 ### CVS template
 /CVS/*

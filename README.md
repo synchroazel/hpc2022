@@ -66,7 +66,7 @@ proceed to the test with the following:
 ```bash
 mpiexec -np 8 ./cmake-build-optimized/hpc2022 -l testing \
                     -i ./data/iris_test.csv \
-                    -s ./saved_svm/radialr_C0.010000_G1.000000.svm \
+                    -s ./saved_svm/linear_C0.010000.svm \
                     -r 19 -c 5 -t 5
 ```
 
