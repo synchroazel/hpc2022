@@ -537,6 +537,9 @@ int main(int argc, char *argv[]) {
     if (!logic_set_flag) {
         tuning_logic = rows_t > columns;
         if (process_rank == MASTER_PROCESS) {
+#if SHOW_LOGTIME
+            logtime();
+#endif
             std::cout
                     << "[WARN] Tuning logic was not supplied, therefore the program will adapt based on the supplied datasets\n";
         }
@@ -1637,7 +1640,6 @@ int main(int argc, char *argv[]) {
             std::cout << "[ERROR] Program logic was not passed!";
             exit(1);
     }
-
 
     if (performance_checks) {
 
