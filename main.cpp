@@ -20,7 +20,10 @@ std::string read_env_var(const std::string &name) {
     if (getenv(name.c_str())) {
         ris = getenv(name.c_str());
     } else {
-        std::cout << "[WARNING] The environment variable" << name << "was not found.\n";
+#if SHOW_LOGTIME
+        logtime();
+#endif
+        std::cout << "[WARN] The environment variable " << name << " was not found.\n";
         // exit(1);
         return "FALSE";
     }

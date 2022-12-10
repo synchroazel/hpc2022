@@ -11,41 +11,6 @@
 #define DEBUG_READ_DATASET false
 #define PERFORMANCE_CHECK true
 
-void build_mpi_datatype(MPI_Datatype *MPI_Dataset, Dataset df) {
-
-    /**
-     * Create a new data type called "MPI_Matrix", to represent Matrix Class
-     */
-
-    int count{6}; // 6 elements
-    int block_lengths[6] = { /* length of elements*/
-            (int) (df.rows_number * df.predictors_column_number), /*predictor matrix*/
-            (int) (df.rows_number),/*class vector*/
-            1, /*predictors_column_number*/
-            1, /* rows_number */
-            (int) (df.number_of_unique_classes), /*unique classes*/
-            1 /*number of unique classes*/
-    };
-
-    MPI_Aint displacements[6]; // array of displacements
-    displacements[0] = offsetof (Dataset, predictor_matrix);
-    displacements[1] = offsetof (Dataset, class_vector);
-    displacements[2] = offsetof (Dataset, predictors_column_number);
-    displacements[3] = offsetof (Dataset, rows_number);
-    displacements[4] = offsetof (Dataset, unique_classes);
-    displacements[5] = offsetof (Dataset, number_of_unique_classes);
-    MPI_Datatype types[6] = {
-            MPI_DOUBLE, /*predictor matrix */
-            MPI_INT, /*class array*/
-            MPI_INT, /*predictors_column_number*/
-            MPI_INT, /* rows_number */
-            MPI_INT, /*unique classes*/
-            MPI_INT /*number of unique classes*/
-    };
-    MPI_Type_create_struct(count, block_lengths, displacements, types, MPI_Dataset);
-    MPI_Type_commit(MPI_Dataset);
-}
-
 Dataset read_dataset(const std::string &filepath, int rows, int columns, int target_column) {
 
     /**
