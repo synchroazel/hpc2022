@@ -21,11 +21,21 @@ The program supports cli arguments. You can inspect them running the program wit
 
 ### A working example
 
-Let's say you want to run the code on the `iris` dataset.
+Say you want to run the code on the `iris` dataset, which is included in the repository.
 
-Note that the `iris` dataset included in this repository has been already split into training, validation and test
-partitions, otherwise you would have needed to run the `ds_preprocessing.py` script first, specifying the dataset
-with the `-f` option.
+Note that it has been already split into training, validation and test partitions, otherwise you would have needed to
+run the `ds_preprocessing.py` script first, specifying the dataset with the `-f` option.
+
+Also note that to perform time checks and benchmarks, the environment variable `PERFORMANCE_CHECKS` needs to be set
+to true with:
+
+```bash
+export PERFORMANCE_CHECKS=TRUE
+```
+
+If you do not need to perform time checks, you can skip this step, and you can safely ignore related warnings in
+runtime. On the cluster usage, as we will see later, this step is not needed as the environment variable is already
+specified in the job script, and will be set automatically.
 
 You can start by tuning an SVM to find the best parameters for the dataset. Assuming the program has been compiled with
 cmake in the folder `cmake-build-optimized` and linked to the `hpc2022` executable, you can run the following:
