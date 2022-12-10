@@ -2,10 +2,7 @@
 mpi_*
 **/cmake-build-default/
 **/cmake-build-debug/
-**/cmake-build-optimized-o1/
-**/cmake-build-optimized-o2/
-**/cmake-build-optimized-o3/
-**/cmake-build-optimized-ofast/
+**/cmake-build-optimized/
 **/cmake-build-release-o1/
 **/cmake-build-release-o2/
 **/cmake-build-release-o3/

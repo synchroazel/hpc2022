@@ -1,9 +1,3 @@
-/*
-class Matrix represents a matrix operator[](int i) returns a reference to the ith Row.
-Row is an internal type that simply defines the operator[](int j) to return
-the ith element in a Row (which is a T&)
-*/
-
 #ifndef HPC2022_DATASET_H
 #define HPC2022_DATASET_H
 
@@ -133,21 +127,9 @@ void modify_matrix_value(double *x, double value, unsigned int row, unsigned int
     *(x + index(row, column, column_width)) = value;
 }
 
-/* Problems on cluster, not used anyway ---------------------------------------------------------------------------- */
-
-//void set_row_values(double *x, const double *row_values, unsigned int row, unsigned int column_width) {
-//    // TODO: search for a better approach
-//
-//    memcpy(x + index(row, 0, column_width), row_values, column_width);
-//    // for(int i=0; i < column_width; i++){
-//    //     modify_matrix_value(x, *(row_values + i), row, i, column_width);
-//    // }
-//}
-
-/* ----------------------------------------------------------------------------------------------------------------- */
 
 /**
- * Presentation
+ * Presentation functions
  */
 
 template<typename T>
@@ -183,7 +165,7 @@ void print_dataset(const Dataset &df, bool matrix = true) {
     std::cout << "The dataset has " << df.rows_number << " rows and " << df.predictors_column_number + 1 << " columns"
               << std::endl;
     if (matrix) {
-        std::cout << "Preictor matrix:" << std::endl;
+        std::cout << "Predictor matrix:" << std::endl;
         print_matrix(df.predictor_matrix, df.rows_number, df.predictors_column_number);
     }
     std::cout << "Class vector:" << std::endl;

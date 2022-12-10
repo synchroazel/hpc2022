@@ -1,10 +1,11 @@
-#include "iostream"
+#ifndef HPC2022_READ_DATASET_H
+#define HPC2022_READ_DATASET_H
+
+#include <iostream>
+#include <cmath>
 #include "pre_process.h"
 #include "mpi.h"
 #include "utils.h"
-
-#include <cmath>
-
 
 #define MASTER_PROCESS 0
 #define DEBUG_READ_DATASET false
@@ -25,6 +26,7 @@ void build_mpi_datatype(MPI_Datatype *MPI_Dataset, Dataset df) {
             (int) (df.number_of_unique_classes), /*unique classes*/
             1 /*number of unique classes*/
     };
+
     MPI_Aint displacements[6]; // array of displacements
     displacements[0] = offsetof (Dataset, predictor_matrix);
     displacements[1] = offsetof (Dataset, class_vector);
@@ -53,8 +55,6 @@ Dataset read_dataset(const std::string &filepath, int rows, int columns, int tar
     int MPI_Error_control;
 
     char *file_separator = (char *) (",");
-
-    // TODO : pass rank and size to function
 
     // Get the number of processes
     int world_size;
@@ -94,7 +94,6 @@ Dataset read_dataset(const std::string &filepath, int rows, int columns, int tar
 
     } else if (world_size <= rows * columns) {
         // squares of rows and columns
-        // TODO: find a better way
         if (rows > columns) {
             rows_per_process = rows;
             cols_per_process = 0;
@@ -107,7 +106,8 @@ Dataset read_dataset(const std::string &filepath, int rows, int columns, int tar
 
         if (process_rank == MASTER_PROCESS) {
             logtime();
-            std::cout << "[INFO] Case 3: Each process reads up to " << rows_per_process << " rows and " << cols_per_process
+            std::cout << "[INFO] Case 3: Each process reads up to " << rows_per_process << " rows and "
+                      << cols_per_process
                       << " columns" << std::endl;
         }
 
@@ -193,3 +193,5 @@ Dataset read_dataset(const std::string &filepath, int rows, int columns, int tar
     return df;
 
 }
+
+#endif //HPC2022_READ_DATASET_H

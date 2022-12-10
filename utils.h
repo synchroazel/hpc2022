@@ -5,15 +5,19 @@
 #include <sys/time.h>
 #include <cmath>
 
-void get_current_time_formatted(char* buffer, long* millisec){
+
+/**
+ * Get the current time for logging function
+ */
+
+void get_current_time_formatted(char *buffer, long *millisec) {
     struct tm *tm_info;
-    struct timeval tv;
+    struct timeval tv{};
 
     gettimeofday(&tv, nullptr);
 
-
     *millisec = lrint((double) tv.tv_usec / 1000.0); // Round to nearest millisec
-    if (*millisec >= 1000) { // Allow for rounding up to nearest second
+    if (*millisec >= 1000) { // Allow for rounding up to the nearest second
 
         *millisec -= 1000;
         tv.tv_sec++;
@@ -23,6 +27,11 @@ void get_current_time_formatted(char* buffer, long* millisec){
 
     strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
 }
+
+
+/**
+ * Logging function for prints
+ */
 
 void logtime() {
 

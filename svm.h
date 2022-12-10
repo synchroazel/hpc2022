@@ -1,7 +1,3 @@
-//
-// Created by dmmp on 15/11/22.
-//
-
 #ifndef HPC2022_SVM_H
 #define HPC2022_SVM_H
 
@@ -14,7 +10,6 @@
 
 #include "Dataset.h"
 
-
 #define DEFAULT_LEARNING_RATE 0.001
 #define DEFAULT_LIMIT 0.1
 #define DEFAULT_EPS 1e-6
@@ -23,6 +18,7 @@
 #define DEFAULT_INTERCEPT 0
 #define DEFAULT_DEGREE 2
 #define DEFAULT_KERNEL 'p'
+
 
 /**
  * Kernel namespace
@@ -73,14 +69,7 @@ typedef struct Kernel_SVM {
     bool verbose{};
 
     char kernel_type{};
-    KernelFunc K{}; // linear, sigmoid, radial, polynomial
-    //TrainFunc train{};//(Dataset training_data, double params[4], const double lr, const double limit = 0.001);
-
-    //TestFunc test{};//(Dataset test_data);
-
-    //HelperFunc f{};//(const double x); // used in train
-
-    //HelperFunc g{};//(const double x); // used in test
+    KernelFunc K{};  // linear, sigmoid, radial, polynomial
 
 
 } Kernel_SVM;
@@ -100,20 +89,25 @@ void set_kernel_function(Kernel_SVM *svm, char kernel_type) {
         exit(1);
     }
 }
-std::string get_extended_kernel_name(char c){
-    switch(c){
-        case 'l':return "Linear ";
-        case 'r':return "Radial ";
-        case 's':return "Sigmoid ";
-        case 'p':return "polynomial ";
-        default:return "";
+
+std::string get_extended_kernel_name(char c) {
+    switch (c) {
+        case 'l':
+            return "Linear ";
+        case 'r':
+            return "Radial ";
+        case 's':
+            return "Sigmoid ";
+        case 'p':
+            return "polynomial ";
+        default:
+            return "";
     }
 }
-std::string get_extended_kernel_name(Kernel_SVM *svm){
+
+std::string get_extended_kernel_name(Kernel_SVM *svm) {
     return get_extended_kernel_name(svm->kernel_type);
 }
-
-// TODO: add error checks
 
 
 /**
@@ -165,6 +159,7 @@ int save_svm(const Kernel_SVM *svm, const std::string &path) {
     return 0; // no problems
 }
 
+
 /**
  * Support for deserialization
  */
@@ -183,12 +178,12 @@ int read_svm(Kernel_SVM *svm, const std::string &path) {
     fread(&svm->arr_xs_column_size, sizeof(int), 1, file_to_read);
     fread(&svm->arr_xs_in_row_size, sizeof(int), 1, file_to_read);
 
-    svm->arr_xs = (double *) calloc(svm->arr_xs_row_size , svm->arr_xs_column_size * sizeof(double));
-    svm->arr_ys = (int *) calloc(svm->arr_xs_row_size , sizeof(int));
-    svm->arr_alpha_s = (double *) calloc(svm->arr_xs_row_size , sizeof(double));
-    svm->arr_xs_in = (double *) calloc(svm->arr_xs_in_row_size * svm->arr_xs_column_size , sizeof(double));
-    svm->arr_ys_in = (int *) calloc(svm->arr_xs_in_row_size , sizeof(int));
-    svm->arr_alpha_s_in = (double *) calloc(svm->arr_xs_in_row_size , sizeof(double));
+    svm->arr_xs = (double *) calloc(svm->arr_xs_row_size, svm->arr_xs_column_size * sizeof(double));
+    svm->arr_ys = (int *) calloc(svm->arr_xs_row_size, sizeof(int));
+    svm->arr_alpha_s = (double *) calloc(svm->arr_xs_row_size, sizeof(double));
+    svm->arr_xs_in = (double *) calloc(svm->arr_xs_in_row_size * svm->arr_xs_column_size, sizeof(double));
+    svm->arr_ys_in = (int *) calloc(svm->arr_xs_in_row_size, sizeof(int));
+    svm->arr_alpha_s_in = (double *) calloc(svm->arr_xs_in_row_size, sizeof(double));
 
     fread(svm->arr_xs, sizeof(double) * svm->arr_xs_row_size * svm->arr_xs_column_size, 1, file_to_read);
     fread(svm->arr_ys, sizeof(int) * svm->arr_xs_row_size, 1, file_to_read);
@@ -227,6 +222,7 @@ void log(const std::string &str) {
 
 }
 
+
 /**
  * Read hyperparameters
  */
@@ -245,20 +241,10 @@ void read_hyperparameters(const std::string &filepath,
     std::string coef0_values = tree.get<std::string>("coef0");
     std::string degree_values = tree.get<std::string>("degree");
 
-    cost_array_size = (int)count(cost_values.begin(), cost_values.end(), ',') + 1;
-    gamma_array_size = (int)count(gamma_values.begin(), gamma_values.end(), ',') + 1;
-    coef0_array_size = (int)count(coef0_values.begin(), coef0_values.end(), ',') + 1;
-    degree_array_size = (int)count(degree_values.begin(), degree_values.end(), ',') + 1;
-
-    // cost_array = (double *) realloc(cost_array, cost_array_size * sizeof(double));
-    // gamma_array = (double *) realloc(gamma_array, gamma_array_size * sizeof(double));
-    // coef0_array = (double *) realloc(coef0_array, coef0_array_size * sizeof(double));
-    // degree_array = (double *) realloc(degree_array, degree_array_size * sizeof(double));
-
-    // cost_array = (double *) calloc( cost_array_size , sizeof(double));
-    // gamma_array = (double *) calloc(gamma_array_size , sizeof(double));
-    // coef0_array = (double *) calloc(coef0_array_size , sizeof(double));
-    // degree_array = (double *) calloc( degree_array_size , sizeof(double));
+    cost_array_size = (int) count(cost_values.begin(), cost_values.end(), ',') + 1;
+    gamma_array_size = (int) count(gamma_values.begin(), gamma_values.end(), ',') + 1;
+    coef0_array_size = (int) count(coef0_values.begin(), coef0_values.end(), ',') + 1;
+    degree_array_size = (int) count(degree_values.begin(), degree_values.end(), ',') + 1;
 
     std::vector<std::string> cost_vector;
     std::vector<std::string> gamma_vector;

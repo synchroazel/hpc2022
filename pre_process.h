@@ -1,7 +1,3 @@
-//
-// Created by dmmp on 06/11/22.
-//
-
 #ifndef HPC2022_PRE_PROCESS_H
 #define HPC2022_PRE_PROCESS_H
 
@@ -9,13 +5,17 @@
 #include "fstream"
 #include "Dataset.h"
 #include "string"
-#include "boost/tokenizer.hpp" // for tokenization
+#include "boost/tokenizer.hpp"
 #include "regex"
 #include "limits"
 
 #define DEBUG_READ_DATA false
 // NB: assumes pre_processed file
 
+
+/**
+ * Parallel reading
+ */
 
 void read_dataset_parallel(
         double *x, /*out*/
@@ -102,6 +102,5 @@ void read_dataset_parallel(
     print_matrix(x, x_rows, x_columns);
 #endif
 }
-
 
 #endif //HPC2022_PRE_PROCESS_H
