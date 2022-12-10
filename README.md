@@ -56,7 +56,7 @@ following:
 mpiexec -np 8 ./cmake-build-optimized/hpc2022 -l training \
                     -i ./data/iris_training.csv \
                     -S ./saved_svm/ \
-                    -r 70 -c 5 -t 5 -k r -C 0.01 -g 1
+                    -r 70 -c 5 -t 5 -k l -C 0.01
 ```
 
 Having trained the SVM, you can now use the saved `.svm` file to classify the test set. The file is stored under the
